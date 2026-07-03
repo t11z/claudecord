@@ -9,8 +9,6 @@ import type { RunMode } from "../types.js";
 export interface ClaudeCredentials {
   oauthToken?: string | undefined;
   apiKey?: string | undefined;
-  /** GitHub token exposed to agentic runs for `git`/`gh`; see applyGithubEnv. */
-  githubToken?: string | undefined;
 }
 
 export interface RunRequest {
@@ -23,6 +21,12 @@ export interface RunRequest {
   model: string;
   mode: RunMode;
   systemPromptExtra?: string | null | undefined;
+  /**
+   * GitHub token exposed to this agentic run for `git`/`gh` (see applyGithubEnv).
+   * The caller decides whose token this is — the acting user's linked token, or
+   * the shared operator token. Ignored in chat mode. See conversation.ts.
+   */
+  githubToken?: string | undefined;
   abortController?: AbortController | undefined;
   maxTurns?: number | undefined;
 }
@@ -65,7 +69,7 @@ You are running inside the claudecord bot. Your working directory is a scratch w
 
 const GITHUB_SYSTEM_APPEND = `
 
-A GitHub token is configured: \`git\` and the \`gh\` CLI are installed and already authenticated (via GH_TOKEN), so you can clone, read, push and open pull requests on any repository the token can reach. Clone into your scratch workspace. Never print the token or the contents of GH_TOKEN/GITHUB_TOKEN.`;
+A GitHub token is configured: \`git\` and the \`gh\` CLI are installed and already authenticated (via GH_TOKEN), so you can clone, read, push and open pull requests on any repository the token can reach. It acts as the GitHub account of the person you're talking to, within their namespace. Clone into your scratch workspace. Never print the token or the contents of GH_TOKEN/GITHUB_TOKEN.`;
 
 /**
  * Wires the configured GitHub token into a child-process environment so that
@@ -119,10 +123,11 @@ export function createClaudeEngine(getCredentials: () => ClaudeCredentials): Cla
     }
 
     // The GitHub token is only useful where Bash/git/gh exist — agentic runs.
-    // Keep it out of chat subprocesses entirely.
-    const githubEnabled = req.mode === "agentic" && !!credentials.githubToken;
-    if (githubEnabled && credentials.githubToken) {
-      applyGithubEnv(env, credentials.githubToken);
+    // Keep it out of chat subprocesses entirely. The caller supplies whose
+    // token to use (per-user or shared) via req.githubToken.
+    const githubEnabled = req.mode === "agentic" && !!req.githubToken;
+    if (githubEnabled && req.githubToken) {
+      applyGithubEnv(env, req.githubToken);
     } else {
       delete env.GH_TOKEN;
       delete env.GITHUB_TOKEN;

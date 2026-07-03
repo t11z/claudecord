@@ -54,6 +54,12 @@ export const migrations: string[] = [
     value TEXT NOT NULL
   );
   `,
+  // v2 — per-user GitHub role gate. When non-empty, only members with one of
+  // these roles may use their linked GitHub identity in agentic runs, and the
+  // shared operator token is never used as a fallback in that guild.
+  `
+  ALTER TABLE guild_config ADD COLUMN github_role_ids TEXT NOT NULL DEFAULT '[]';
+  `,
 ];
 
 export function runMigrations(db: Database): void {

@@ -11,6 +11,10 @@ Per server (dashboard → Access control, or `/config`):
   Threads inherit their parent channel's status.
 - **Roles** — empty list = everyone may talk to the bot. Otherwise a user
   needs at least one allowlisted role.
+- **GitHub roles** — which roles may link and use their **own** GitHub account
+  in agentic runs (see [per-user GitHub](/claudecord/guide/github-integration/)).
+  Empty = per-user gating off. When set, the shared `GITHUB_TOKEN` is not used
+  on that server.
 - **Enabled** — a master switch per server.
 
 Since every message to the bot consumes your subscription quota, restricting
@@ -62,3 +66,8 @@ Agentic mode is also the prerequisite for the optional
 configured, agentic threads can clone, push and open pull requests on your
 repositories via `git` and `gh`. Scope the token tightly and read that page's
 security note before enabling it.
+
+On shared servers, prefer **per-user GitHub**: register a GitHub App, gate it
+with *GitHub roles*, and each member runs `/link-github` to act in their own
+namespace instead of everyone sharing one token. See the
+[GitHub integration](/claudecord/guide/github-integration/) page.

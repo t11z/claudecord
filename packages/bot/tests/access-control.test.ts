@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { GuildConfig } from "../src/db/repos/guild-config.js";
-import { isAllowed } from "../src/discord/access-control.js";
+import {
+  canUseGithub,
+  chooseGithubToken,
+  isAllowed,
+  isGithubGateActive,
+} from "../src/discord/access-control.js";
 
 function config(overrides: Partial<GuildConfig> = {}): GuildConfig {
   return {
@@ -9,6 +14,7 @@ function config(overrides: Partial<GuildConfig> = {}): GuildConfig {
     allowedChannelIds: [],
     allowedRoleIds: [],
     agenticEnabled: false,
+    githubRoleIds: [],
     model: null,
     systemPromptExtra: null,
     ...overrides,
@@ -76,5 +82,79 @@ describe("isAllowed", () => {
     expect(isAllowed(cfg, { channelId: "c2", parentChannelId: null, memberRoleIds: ["r1"] })).toBe(
       false,
     );
+  });
+});
+
+describe("GitHub role gate", () => {
+  it("is inactive with no github roles, active otherwise", () => {
+    expect(isGithubGateActive(config())).toBe(false);
+    expect(isGithubGateActive(config({ githubRoleIds: ["g"] }))).toBe(true);
+  });
+
+  it("permits everyone when no gate is set", () => {
+    expect(canUseGithub(config(), [])).toBe(true);
+  });
+
+  it("permits only members holding a github role when gated", () => {
+    const cfg = config({ githubRoleIds: ["gh"] });
+    expect(canUseGithub(cfg, ["gh"])).toBe(true);
+    expect(canUseGithub(cfg, ["other"])).toBe(false);
+    expect(canUseGithub(cfg, [])).toBe(false);
+  });
+});
+
+describe("chooseGithubToken", () => {
+  it("uses the shared token as fallback when there is no gate", () => {
+    expect(
+      chooseGithubToken({
+        gateActive: false,
+        memberAllowed: true,
+        perUserToken: null,
+        sharedToken: "shared",
+      }),
+    ).toBe("shared");
+  });
+
+  it("prefers the user's own token over the shared one", () => {
+    expect(
+      chooseGithubToken({
+        gateActive: false,
+        memberAllowed: true,
+        perUserToken: "mine",
+        sharedToken: "shared",
+      }),
+    ).toBe("mine");
+  });
+
+  it("never falls back to the shared token when a gate is active", () => {
+    // Gated-in but not linked → no token at all (not the shared one).
+    expect(
+      chooseGithubToken({
+        gateActive: true,
+        memberAllowed: true,
+        perUserToken: null,
+        sharedToken: "shared",
+      }),
+    ).toBeUndefined();
+    // Gated-in and linked → their own token.
+    expect(
+      chooseGithubToken({
+        gateActive: true,
+        memberAllowed: true,
+        perUserToken: "mine",
+        sharedToken: "shared",
+      }),
+    ).toBe("mine");
+  });
+
+  it("gives gated-out members no token", () => {
+    expect(
+      chooseGithubToken({
+        gateActive: true,
+        memberAllowed: false,
+        perUserToken: "mine",
+        sharedToken: "shared",
+      }),
+    ).toBeUndefined();
   });
 });

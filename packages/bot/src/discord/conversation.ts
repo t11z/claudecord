@@ -1,12 +1,43 @@
 import { AttachmentBuilder, type Message, type SendableChannels } from "discord.js";
 import { classifyFailure } from "../claude/errors.js";
 import type { AppContext } from "../context.js";
+import type { GuildConfig } from "../db/repos/guild-config.js";
 import type { ThreadSession } from "../db/repos/sessions.js";
+import { canUseGithub, chooseGithubToken, isGithubGateActive } from "./access-control.js";
 import { buildPrompt } from "./attachments.js";
 import { ThrottledEditor } from "./progress.js";
 import { DISCORD_MESSAGE_LIMIT, splitMessage } from "./splitter.js";
 
 const RATE_LIMIT_PAUSE_MS = 60_000;
+
+/**
+ * Decides which GitHub token (if any) an agentic turn runs with. The acting
+ * user is the message author, so runs happen in *their* GitHub namespace.
+ *
+ * - When a guild has a per-user GitHub role gate: only gated-in members get a
+ *   token, and it is strictly their own — the shared operator token is never a
+ *   fallback there (safe on multi-user servers).
+ * - With no gate: prefer the author's linked token, else the shared token
+ *   (backwards-compatible single-user behaviour).
+ */
+async function resolveTurnGithubToken(
+  ctx: AppContext,
+  config: GuildConfig,
+  message: Message,
+): Promise<string | undefined> {
+  const memberRoleIds = [...(message.member?.roles.cache.keys() ?? [])];
+  const gateActive = isGithubGateActive(config);
+  const memberAllowed = canUseGithub(config, memberRoleIds);
+  // Skip the token lookup entirely for gated-out members.
+  const perUserToken =
+    gateActive && !memberAllowed ? null : await ctx.github.getFreshToken(message.author.id);
+  return chooseGithubToken({
+    gateActive,
+    memberAllowed,
+    perUserToken,
+    sharedToken: ctx.credentials().githubToken,
+  });
+}
 
 async function react(message: Message, emoji: string): Promise<void> {
   try {
@@ -64,6 +95,10 @@ export async function runConversationTurn(
   const startedAt = new Date().toISOString();
 
   const guildConfig = ctx.repos.guildConfig.get(session.guildId);
+  const githubToken =
+    session.mode === "agentic"
+      ? await resolveTurnGithubToken(ctx, guildConfig, userMessage)
+      : undefined;
 
   const { promise } = ctx.queue.enqueue(session.guildId, () =>
     ctx.engine(
@@ -74,6 +109,7 @@ export async function runConversationTurn(
         model: session.model,
         mode: session.mode,
         systemPromptExtra: guildConfig.systemPromptExtra,
+        githubToken,
         abortController: abort,
       },
       {

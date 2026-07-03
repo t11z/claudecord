@@ -36,6 +36,7 @@ export interface GuildConfigDto {
   allowedChannelIds: string[];
   allowedRoleIds: string[];
   agenticEnabled: boolean;
+  githubRoleIds: string[];
   model: string | null;
   systemPromptExtra: string | null;
 }
@@ -91,6 +92,19 @@ export interface StatsDto {
   topGuilds: { guildId: string; guildName: string | null; runs: number }[];
   topUsers: { userId: string; runs: number }[];
   lastRateLimitAt: string | null;
+}
+
+export interface GithubIdentityDto {
+  discordUserId: string;
+  login: string | null;
+  linkedAt: string;
+  expiresAt: string | null;
+}
+
+export interface GithubIdentitiesResponseDto {
+  /** Whether a GitHub App (client id + secret) is configured for linking. */
+  appConfigured: boolean;
+  identities: GithubIdentityDto[];
 }
 
 export interface SetupTokenRequestDto {

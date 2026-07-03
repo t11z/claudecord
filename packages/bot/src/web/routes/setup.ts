@@ -85,4 +85,33 @@ export function setupRoutes(app: Hono, ctx: AppContext, hooks: WebServerHooks): 
     }
     return c.json<SetupResultDto>({ ok: check.ok, message: check.message }, check.ok ? 200 : 400);
   });
+
+  /**
+   * Store (or clear) the GitHub App used for per-user Device Flow linking.
+   * Env-provided GITHUB_APP_CLIENT_ID/_SECRET still take precedence.
+   */
+  app.post("/api/setup/github-app", async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as {
+      clientId?: string;
+      clientSecret?: string;
+    };
+    const clientId = body.clientId?.trim();
+    const clientSecret = body.clientSecret?.trim();
+
+    if (!clientId && !clientSecret) {
+      ctx.secrets.update({ githubAppClientId: undefined, githubAppClientSecret: undefined });
+      return c.json<SetupResultDto>({ ok: true, message: "GitHub App credentials removed." });
+    }
+    if (!clientId || !clientSecret) {
+      return c.json<SetupResultDto>(
+        { ok: false, message: "Both the Client ID and a Client secret are required." },
+        400,
+      );
+    }
+    ctx.secrets.update({ githubAppClientId: clientId, githubAppClientSecret: clientSecret });
+    return c.json<SetupResultDto>({
+      ok: true,
+      message: "GitHub App saved. Role-gated users can now run /link-github to connect GitHub.",
+    });
+  });
 }

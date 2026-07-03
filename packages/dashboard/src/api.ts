@@ -1,4 +1,6 @@
 import type {
+  GithubIdentitiesResponseDto,
+  GithubIdentityDto,
   GuildConfigDto,
   GuildConfigResponseDto,
   GuildSummaryDto,
@@ -9,6 +11,8 @@ import type {
 } from "../../bot/src/types.ts";
 
 export type {
+  GithubIdentitiesResponseDto,
+  GithubIdentityDto,
   GuildConfigDto,
   GuildConfigResponseDto,
   GuildSummaryDto,
@@ -69,4 +73,9 @@ export const api = {
     request<SetupResultDto>("POST", "/api/setup/discord-token", { token, applicationId }),
   setupGithubToken: (token: string) =>
     request<SetupResultDto>("POST", "/api/setup/github-token", { token }),
+  setupGithubApp: (clientId: string, clientSecret: string) =>
+    request<SetupResultDto>("POST", "/api/setup/github-app", { clientId, clientSecret }),
+  githubIdentities: () => request<GithubIdentitiesResponseDto>("GET", "/api/github/identities"),
+  unlinkGithubIdentity: (discordUserId: string) =>
+    request<{ ok: boolean }>("DELETE", `/api/github/identities/${discordUserId}`),
 };

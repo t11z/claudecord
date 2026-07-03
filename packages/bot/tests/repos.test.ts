@@ -65,6 +65,7 @@ describe("GuildConfigRepo", () => {
       allowedChannelIds: ["c1", "c2"],
       allowedRoleIds: ["r1"],
       agenticEnabled: true,
+      githubRoleIds: ["r2"],
       model: "claude-opus-4-8",
       systemPromptExtra: "Be terse.",
     });
@@ -73,6 +74,7 @@ describe("GuildConfigRepo", () => {
     expect(cfg.allowedChannelIds).toEqual(["c1", "c2"]);
     expect(cfg.allowedRoleIds).toEqual(["r1"]);
     expect(cfg.agenticEnabled).toBe(true);
+    expect(cfg.githubRoleIds).toEqual(["r2"]);
     expect(cfg.model).toBe("claude-opus-4-8");
 
     repo.upsert({ ...cfg, model: null });

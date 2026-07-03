@@ -1,5 +1,5 @@
 import { useEffect, useState } from "preact/hooks";
-import { api } from "../api.ts";
+import { api, type GithubIdentityDto } from "../api.ts";
 import { Card } from "../components.tsx";
 
 type StepState = "pending" | "busy" | "done" | "error";
@@ -18,7 +18,23 @@ export function Setup() {
   const [githubState, setGithubState] = useState<StepState>("pending");
   const [githubMessage, setGithubMessage] = useState<string | null>(null);
 
+  const [appClientId, setAppClientId] = useState("");
+  const [appClientSecret, setAppClientSecret] = useState("");
+  const [appState, setAppState] = useState<StepState>("pending");
+  const [appMessage, setAppMessage] = useState<string | null>(null);
+  const [identities, setIdentities] = useState<GithubIdentityDto[]>([]);
+
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
+
+  const loadIdentities = () => {
+    api
+      .githubIdentities()
+      .then((r) => {
+        if (r.appConfigured) setAppState("done");
+        setIdentities(r.identities);
+      })
+      .catch(() => {});
+  };
 
   useEffect(() => {
     api
@@ -30,7 +46,31 @@ export function Setup() {
         setInviteUrl(s.inviteUrl);
       })
       .catch(() => {});
+    loadIdentities();
   }, []);
+
+  const submitApp = async () => {
+    setAppState("busy");
+    setAppMessage(null);
+    try {
+      const result = await api.setupGithubApp(appClientId, appClientSecret);
+      setAppState(result.ok ? "done" : "error");
+      setAppMessage(result.message);
+      setAppClientSecret("");
+    } catch (err) {
+      setAppState("error");
+      setAppMessage(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const unlink = async (id: string) => {
+    try {
+      await api.unlinkGithubIdentity(id);
+      loadIdentities();
+    } catch {
+      // ignore — the list will simply stay as-is
+    }
+  };
 
   const submitClaude = async () => {
     setClaudeState("busy");
@@ -218,6 +258,70 @@ export function Setup() {
         <p class="muted">
           Stored in <code>DATA_DIR/secrets.json</code> (chmod 600), never in the database or logs. A{" "}
           <code>GITHUB_TOKEN</code> environment variable takes precedence.
+        </p>
+      </Card>
+
+      <Card title="3b · Per-user GitHub (multi-user, optional)">
+        <p class="muted">
+          On a shared server, let each role-gated member connect their <strong>own</strong> GitHub
+          account instead of everyone sharing one token. Register a{" "}
+          <a href="https://github.com/settings/apps/new" target="_blank" rel="noreferrer">
+            GitHub App
+          </a>{" "}
+          with <strong>Enable Device Flow</strong> checked, then paste its Client ID and a generated
+          Client secret here. Members run <code>/link-github</code> in Discord; agentic runs then
+          act in the acting user's namespace. Set the allowed roles per server under Access control.
+        </p>
+        <label class="field">
+          <span>Client ID</span>
+          <input
+            type="text"
+            placeholder="Iv1.abc123…"
+            value={appClientId}
+            onInput={(e) => setAppClientId((e.target as HTMLInputElement).value)}
+          />
+        </label>
+        <label class="field">
+          <span>Client secret</span>
+          <input
+            type="password"
+            value={appClientSecret}
+            onInput={(e) => setAppClientSecret((e.target as HTMLInputElement).value)}
+          />
+        </label>
+        <button
+          type="button"
+          disabled={appState === "busy" || appClientId.trim().length === 0}
+          onClick={() => void submitApp()}
+        >
+          {appState === "busy" ? "Saving…" : "Save GitHub App"}
+        </button>{" "}
+        {appState === "done" ? "✅" : null}
+        {appMessage ? <p class={appState === "error" ? "" : "muted"}>{appMessage}</p> : null}
+        {identities.length > 0 ? (
+          <>
+            <p class="muted" style="margin-top:1rem">
+              <strong>Linked accounts</strong>
+            </p>
+            <div class="checkbox-list">
+              {identities.map((id) => (
+                <div key={id.discordUserId} style="display:flex;gap:0.6rem;align-items:center">
+                  <span>
+                    @{id.login ?? "unknown"} <span class="muted">· user {id.discordUserId}</span>
+                  </span>
+                  <button type="button" onClick={() => void unlink(id.discordUserId)}>
+                    Unlink
+                  </button>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <p class="muted">No accounts linked yet.</p>
+        )}
+        <p class="muted">
+          Tokens are stored in <code>DATA_DIR/secrets.json</code> (chmod 600), never in the database
+          or logs.
         </p>
       </Card>
 

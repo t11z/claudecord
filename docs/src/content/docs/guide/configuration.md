@@ -14,7 +14,9 @@ in the repository) plus per-server settings in the dashboard.
 | `ANTHROPIC_API_KEY` | — | API-key fallback, used only when no OAuth token is set |
 | `DISCORD_BOT_TOKEN` | — | Bot token from the Developer Portal |
 | `DISCORD_APPLICATION_ID` | — | Application ID (slash commands + invite link) |
-| `GITHUB_TOKEN` | — | GitHub token for `git`/`gh` in agentic threads ([GitHub integration](/claudecord/guide/github-integration/)). `GH_TOKEN` is accepted as an alias |
+| `GITHUB_TOKEN` | — | Shared GitHub token for `git`/`gh` in agentic threads ([GitHub integration](/claudecord/guide/github-integration/)). `GH_TOKEN` is accepted as an alias |
+| `GITHUB_APP_CLIENT_ID` | — | GitHub App client ID for per-user `/link-github` linking ([per-user GitHub](/claudecord/guide/github-integration/)) |
+| `GITHUB_APP_CLIENT_SECRET` | — | GitHub App client secret (pairs with the client ID) |
 | `DASHBOARD_HOST` | `127.0.0.1` | Dashboard bind address |
 | `DASHBOARD_PORT` | `3000` | Dashboard port |
 | `DASHBOARD_PASSWORD` | — | Required (min 8 chars) when `DASHBOARD_HOST` is not localhost |

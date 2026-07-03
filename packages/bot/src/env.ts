@@ -11,6 +11,13 @@ const envSchema = z.object({
    */
   GITHUB_TOKEN: z.string().min(1).optional(),
   GH_TOKEN: z.string().min(1).optional(),
+  /**
+   * GitHub App credentials for per-user OAuth Device Flow linking. When set,
+   * role-gated Discord users can `/link-github` their own account and agentic
+   * runs act in their namespace. Env values take precedence over secrets.json.
+   */
+  GITHUB_APP_CLIENT_ID: z.string().min(1).optional(),
+  GITHUB_APP_CLIENT_SECRET: z.string().min(1).optional(),
   DASHBOARD_HOST: z.string().default("127.0.0.1"),
   DASHBOARD_PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   DASHBOARD_PASSWORD: z.string().min(8).optional(),

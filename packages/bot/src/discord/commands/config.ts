@@ -33,6 +33,12 @@ export const config: Command = {
     )
     .addSubcommand((s) =>
       s
+        .setName("allow-github-role")
+        .setDescription("Add/remove a role that may link & use its own GitHub in agentic runs")
+        .addRoleOption((o) => o.setName("role").setDescription("Role to toggle").setRequired(true)),
+    )
+    .addSubcommand((s) =>
+      s
         .setName("agentic")
         .setDescription("Toggle agentic mode (file & shell tools) — read the security docs first!")
         .addBooleanOption((o) =>
@@ -66,6 +72,7 @@ export const config: Command = {
             `Enabled: ${cfg.enabled ? "✅" : "❌"}`,
             `Allowed channels: ${formatList(cfg.allowedChannelIds, "#")}`,
             `Allowed roles: ${formatList(cfg.allowedRoleIds, "@&")}`,
+            `GitHub roles: ${formatList(cfg.githubRoleIds, "@&")}`,
             `Agentic mode: ${cfg.agenticEnabled ? "⚠️ ON" : "off"}`,
             `Model: ${cfg.model ?? `default (${ctx.env.CLAUDE_MODEL})`}`,
           ].join("\n"),
@@ -105,6 +112,28 @@ export const config: Command = {
             idx >= 0
               ? `Removed <@&${role.id}> from the allowlist.`
               : `Added <@&${role.id}> to the allowlist.`,
+        });
+        return;
+      }
+      case "allow-github-role": {
+        const role = interaction.options.getRole("role", true);
+        const idx = cfg.githubRoleIds.indexOf(role.id);
+        if (idx >= 0) {
+          cfg.githubRoleIds.splice(idx, 1);
+        } else {
+          cfg.githubRoleIds.push(role.id);
+        }
+        ctx.repos.guildConfig.upsert(cfg);
+        const gateNote =
+          cfg.githubRoleIds.length > 0
+            ? "Members with a GitHub role can run `/link-github` to connect their own account; agentic runs then act in their namespace. The shared GitHub token is not used for this server while a gate is set."
+            : "No GitHub roles set — per-user gating is off.";
+        await interaction.reply({
+          ephemeral: true,
+          content:
+            (idx >= 0
+              ? `Removed <@&${role.id}> from the GitHub roles.`
+              : `Added <@&${role.id}> to the GitHub roles.`) + `\n${gateNote}`,
         });
         return;
       }

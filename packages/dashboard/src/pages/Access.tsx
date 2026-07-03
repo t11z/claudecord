@@ -140,6 +140,34 @@ export function Access() {
               ))}
             </div>
           </Card>
+          <Card title="GitHub roles (per-user GitHub)">
+            <p class="muted">
+              Members with one of these roles can run <code>/link-github</code> to connect their own
+              GitHub account; agentic runs they start then act in <em>their</em> namespace. While
+              any role is selected, the shared GitHub token is not used on this server. No selection
+              = per-user gating off. Requires a GitHub App configured under Setup.
+            </p>
+            <div class="checkbox-list">
+              {data.roles.map((r) => (
+                <label key={r.id}>
+                  <input
+                    type="checkbox"
+                    checked={data.config.githubRoleIds.includes(r.id)}
+                    onChange={() =>
+                      setData({
+                        ...data,
+                        config: {
+                          ...data.config,
+                          githubRoleIds: toggle(data.config.githubRoleIds, r.id),
+                        },
+                      })
+                    }
+                  />
+                  @{r.name}
+                </label>
+              ))}
+            </div>
+          </Card>
           <Card title="Agentic mode">
             <div class="callout">
               ⚠️ Agentic mode gives Claude file and shell tools inside a sandbox workspace. Anyone

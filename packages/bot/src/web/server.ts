@@ -8,6 +8,7 @@ import type { AppContext } from "../context.js";
 import { isLocalhost } from "../env.js";
 import { DashboardAuth } from "./auth.js";
 import { configRoutes } from "./routes/config.js";
+import { githubRoutes } from "./routes/github.js";
 import { sessionRoutes } from "./routes/sessions.js";
 import { setupRoutes } from "./routes/setup.js";
 import { statsRoutes } from "./routes/stats.js";
@@ -76,6 +77,7 @@ export function startWebServer(ctx: AppContext, hooks: WebServerHooks): ServerTy
   statusRoutes(app, ctx);
   setupRoutes(app, ctx, hooks);
   configRoutes(app, ctx);
+  githubRoutes(app, ctx);
   sessionRoutes(app, ctx);
   statsRoutes(app, ctx);
 

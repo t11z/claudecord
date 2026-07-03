@@ -29,6 +29,7 @@ export const help: Command = {
         { name: "/usage", value: "Usage stats for this server", inline: true },
         { name: "/model", value: "Pick the model (admins)", inline: true },
         { name: "/config", value: "Allowlists & agentic mode (admins)", inline: true },
+        { name: "/link-github", value: "Use your own GitHub in agentic runs", inline: true },
       )
       .setFooter({ text: `Self-hosted claudecord • Docs: ${DOCS_URL}` });
 

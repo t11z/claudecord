@@ -34,3 +34,39 @@ export function isAllowed(config: GuildConfig, q: AccessQuery): boolean {
 
   return true;
 }
+
+/**
+ * Whether a per-user GitHub role gate is active for this guild — i.e. at least
+ * one role must hold a linked GitHub identity to use it in agentic runs.
+ */
+export function isGithubGateActive(config: GuildConfig): boolean {
+  return config.githubRoleIds.length > 0;
+}
+
+/**
+ * Whether a member is permitted to use their own GitHub identity in agentic
+ * runs. With no gate configured, everyone is (subject to actually having linked).
+ */
+export function canUseGithub(config: GuildConfig, memberRoleIds: string[]): boolean {
+  if (!isGithubGateActive(config)) return true;
+  return memberRoleIds.some((r) => config.githubRoleIds.includes(r));
+}
+
+/**
+ * Pure decision for which GitHub token an agentic turn runs with.
+ * - Gate active: only gated-in members get a token, and strictly their own —
+ *   the shared operator token is never a fallback (safe on multi-user servers).
+ * - No gate: the member's own linked token if any, else the shared token.
+ */
+export function chooseGithubToken(opts: {
+  gateActive: boolean;
+  memberAllowed: boolean;
+  perUserToken: string | null;
+  sharedToken: string | undefined;
+}): string | undefined {
+  if (opts.gateActive) {
+    if (!opts.memberAllowed) return undefined;
+    return opts.perUserToken ?? undefined;
+  }
+  return opts.perUserToken ?? opts.sharedToken;
+}
