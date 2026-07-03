@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" role="img" aria-label="claude-discord logo">
+  <title>claude-discord logo</title>
+  <defs>
+    <linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#D97757"/>
+      <stop offset="1" stop-color="#5865F2"/>
+    </linearGradient>
+  </defs>
+  <rect x="6" y="6" width="108" height="108" rx="26" fill="url(#lg)"/>
+  <!-- speech bubble -->
+  <path d="M32 40c0-6.6 5.4-12 12-12h32c6.6 0 12 5.4 12 12v20c0 6.6-5.4 12-12 12H56l-14 12v-12h-2c-4.4 0-8-3.6-8-8V40z" fill="#F0EEE6"/>
+  <!-- Claude-ish starburst -->
+  <g transform="translate(60,49)" fill="#D97757">
+    <path d="M0-14 2.8-3.9 13.3-4.3 4.6 1.5 8.2 11.3 0 4.8 -8.2 11.3 -4.6 1.5 -13.3-4.3 -2.8-3.9Z" transform="scale(0.9)"/>
+  </g>
+</svg>

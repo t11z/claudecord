@@ -1,0 +1,17 @@
+{
+  "name": "docs",
+  "version": "0.1.0",
+  "private": true,
+  "description": "claude-discord documentation site (Astro Starlight).",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "^0.41.2",
+    "astro": "^7.0.6"
+  }
+}

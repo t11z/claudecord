@@ -1,0 +1,31 @@
+{
+  "name": "claude-discord",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Self-hosted @claude for Discord — mention the bot, get Claude. Powered by your Claude Code OAuth token.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "workspaces": [
+    "packages/*",
+    "docs"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @claude-discord/bot",
+    "dev:dashboard": "npm run dev -w @claude-discord/dashboard",
+    "build": "npm run build -w @claude-discord/dashboard && npm run build -w @claude-discord/bot",
+    "start": "npm run start -w @claude-discord/bot",
+    "lint": "biome ci .",
+    "lint:fix": "biome check --write .",
+    "typecheck": "npm run typecheck -w @claude-discord/bot && npm run typecheck -w @claude-discord/dashboard",
+    "test": "npm run test -w @claude-discord/bot",
+    "docs:dev": "npm run dev -w docs",
+    "docs:build": "npm run build -w docs"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.2",
+    "typescript": "^5.9.3"
+  }
+}

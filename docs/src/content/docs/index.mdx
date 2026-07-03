@@ -1,0 +1,47 @@
+---
+title: claude-discord
+description: Self-hosted @claude for Discord — mention the bot, get Claude. Powered by your Claude Code OAuth token.
+template: splash
+hero:
+  title: "@claude for Discord"
+  tagline: Mention the bot, get Claude. Self-hosted, open source, and powered by the Claude subscription you already pay for — no API key required.
+  actions:
+    - text: Get started
+      link: /claude-discord/guide/getting-started/
+      icon: right-arrow
+      variant: primary
+    - text: View on GitHub
+      link: https://github.com/t11z/claude-discord
+      icon: github
+      variant: minimal
+---
+
+import { Card, CardGrid } from "@astrojs/starlight/components";
+
+<CardGrid stagger>
+  <Card title="Threads with memory" icon="comment">
+    Mention the bot in any channel — it opens a thread and remembers the whole
+    conversation. Keep typing, no re-mention needed.
+  </Card>
+  <Card title="Your subscription, not an API bill" icon="seti:license">
+    Authenticates with a Claude Code OAuth token from your Pro/Max plan via
+    `claude setup-token`. An Anthropic API key works as a fallback.
+  </Card>
+  <Card title="Live streaming feel" icon="rocket">
+    👀 on receipt, a message that grows as Claude thinks, ✅ when done. Code
+    fences are never broken across messages; long answers arrive as Markdown
+    files.
+  </Card>
+  <Card title="Admin dashboard" icon="setting">
+    A local web dashboard with a setup wizard, per-server channel & role
+    allowlists, live sessions and usage stats.
+  </Card>
+  <Card title="Agentic mode (opt-in)" icon="warning">
+    Give Claude file and shell tools inside per-thread sandbox workspaces —
+    off by default, admin-gated, designed for Docker.
+  </Card>
+  <Card title="Built to be forked" icon="open-book">
+    MIT-licensed TypeScript monorepo with unit tests, Biome, and a documented
+    architecture. `good first issue` labels await you.
+  </Card>
+</CardGrid>

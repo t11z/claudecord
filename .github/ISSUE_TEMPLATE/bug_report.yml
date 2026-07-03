@@ -1,0 +1,51 @@
+name: Bug report
+description: Something broke — help us fix it
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! A few details help us
+        reproduce it quickly.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Git commit or release tag you are running
+      placeholder: v0.1.0 / abc1234
+    validations:
+      required: true
+  - type: dropdown
+    id: deploy
+    attributes:
+      label: Deployment method
+      options:
+        - Docker / docker-compose
+        - Plain npm
+        - Other (describe below)
+    validations:
+      required: true
+  - type: dropdown
+    id: auth
+    attributes:
+      label: Claude authentication
+      options:
+        - Claude Code OAuth token (subscription)
+        - Anthropic API key
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: |
+        Paste bot logs around the failure (LOG_LEVEL=debug helps).
+        **Redact tokens before posting.**
+      render: shell
