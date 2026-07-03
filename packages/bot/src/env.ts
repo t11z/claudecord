@@ -31,6 +31,12 @@ const envSchema = z.object({
     .string()
     .optional()
     .transform((v) => v === "1" || v === "true"),
+  /**
+   * Baked into the image at build time from the GitHub Release tag (see the
+   * Dockerfile's APP_VERSION build arg). Keeps the reported version in sync
+   * with the published container instead of the static package.json 0.1.0.
+   */
+  APP_VERSION: z.string().min(1).optional(),
   CLAUDE_MODEL: z.string().default("claude-sonnet-5"),
   DATA_DIR: z.string().default("./data"),
   MAX_CONCURRENT_RUNS: z.coerce.number().int().min(1).max(32).default(4),

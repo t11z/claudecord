@@ -18,6 +18,11 @@ RUN npm run build \
 # ── Runtime stage ────────────────────────────────────────────────────────
 FROM node:22-slim
 
+# Release version, injected by the Release workflow from the git tag. Defaults
+# to "dev" for local `docker build` so the dashboard never reports a stale
+# package.json version.
+ARG APP_VERSION=dev
+
 # git + gh power the optional GitHub integration: when a token is configured,
 # agentic threads can clone, push and open PRs on the repos it reaches.
 # gh isn't in Debian, so pull it from GitHub's own apt repository.
@@ -37,6 +42,7 @@ RUN useradd --create-home --uid 1001 bot
 WORKDIR /app
 
 ENV NODE_ENV=production \
+    APP_VERSION=${APP_VERSION} \
     DATA_DIR=/data \
     DASHBOARD_HOST=0.0.0.0 \
     DASHBOARD_PORT=3000 \
