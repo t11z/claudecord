@@ -12,6 +12,8 @@ export interface StoredSecrets {
   anthropicApiKey?: string;
   discordBotToken?: string;
   discordApplicationId?: string;
+  /** Auto-generated when DASHBOARD_PASSWORD is unset on a non-localhost bind. */
+  dashboardPassword?: string;
 }
 
 export class SecretsStore {

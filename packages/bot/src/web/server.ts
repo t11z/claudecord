@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { type ServerType, serve } from "@hono/node-server";
@@ -17,17 +18,36 @@ export interface WebServerHooks {
   onDiscordTokenSaved: () => Promise<string | null>;
 }
 
-export function startWebServer(ctx: AppContext, hooks: WebServerHooks): ServerType {
-  const { DASHBOARD_HOST: host, DASHBOARD_PORT: port, DASHBOARD_PASSWORD: password } = ctx.env;
+/**
+ * Resolves the effective dashboard password for a non-localhost bind without
+ * ever starting the server unauthenticated. A crash loop here would make the
+ * setup wizard itself unreachable, so a missing password is bootstrapped
+ * instead of treated as a fatal config error: reuse a previously generated
+ * one, or mint and persist a new one and log it exactly once.
+ */
+function resolveBindPassword(
+  ctx: AppContext,
+  host: string,
+  password: string | undefined,
+): string | undefined {
+  if (isLocalhost(host) || password || ctx.env.DASHBOARD_INSECURE_BIND) return password;
 
-  if (!isLocalhost(host) && !password && !ctx.env.DASHBOARD_INSECURE_BIND) {
-    throw new Error(
-      `DASHBOARD_HOST is set to "${host}" (not localhost) but DASHBOARD_PASSWORD is empty. ` +
-        "Refusing to expose an unauthenticated dashboard — set DASHBOARD_PASSWORD (min 8 chars). " +
-        "(DASHBOARD_INSECURE_BIND=true skips this check for container setups whose port is " +
-        "only mapped to the host's loopback interface.)",
-    );
-  }
+  const existing = ctx.secrets.get().dashboardPassword;
+  if (existing) return existing;
+
+  const generated = crypto.randomBytes(18).toString("base64url");
+  ctx.secrets.update({ dashboardPassword: generated });
+  ctx.logger.warn(
+    `DASHBOARD_HOST is set to "${host}" (not localhost) but DASHBOARD_PASSWORD is empty. ` +
+      `Generated a one-time dashboard password so the setup wizard stays reachable: ${generated} ` +
+      "Set DASHBOARD_PASSWORD to replace it with a permanent one.",
+  );
+  return generated;
+}
+
+export function startWebServer(ctx: AppContext, hooks: WebServerHooks): ServerType {
+  const { DASHBOARD_HOST: host, DASHBOARD_PORT: port } = ctx.env;
+  const password = resolveBindPassword(ctx, host, ctx.env.DASHBOARD_PASSWORD);
 
   const auth = new DashboardAuth(ctx, password);
   const app = new Hono();
