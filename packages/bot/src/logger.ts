@@ -8,7 +8,13 @@ export function createLogger(level: string): Logger {
     level,
     ...(pretty ? { transport: { target: "pino-pretty", options: { colorize: true } } } : {}),
     redact: {
-      paths: ["CLAUDE_CODE_OAUTH_TOKEN", "ANTHROPIC_API_KEY", "DISCORD_BOT_TOKEN"],
+      paths: [
+        "CLAUDE_CODE_OAUTH_TOKEN",
+        "ANTHROPIC_API_KEY",
+        "DISCORD_BOT_TOKEN",
+        "GITHUB_TOKEN",
+        "GH_TOKEN",
+      ],
       censor: "[redacted]",
     },
   });

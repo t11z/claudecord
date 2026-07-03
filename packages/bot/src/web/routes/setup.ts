@@ -1,6 +1,7 @@
 import type { Hono } from "hono";
 import { checkClaudeAuth } from "../../claude/auth-check.js";
 import type { AppContext } from "../../context.js";
+import { checkGithubToken } from "../../github/verify.js";
 import type { SetupResultDto } from "../../types.js";
 import type { WebServerHooks } from "../server.js";
 
@@ -63,5 +64,25 @@ export function setupRoutes(app: Hono, ctx: AppContext, hooks: WebServerHooks): 
       message:
         "Connected to Discord. Use the invite link on the overview page to add the bot to a server.",
     });
+  });
+
+  /**
+   * Store (or clear, with an empty token) the GitHub token. An env-provided
+   * GITHUB_TOKEN/GH_TOKEN still takes precedence and can't be edited here.
+   */
+  app.post("/api/setup/github-token", async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { token?: string };
+    const token = body.token?.trim();
+
+    if (!token) {
+      ctx.secrets.update({ githubToken: undefined });
+      return c.json<SetupResultDto>({ ok: true, message: "GitHub token removed." });
+    }
+
+    const check = await checkGithubToken(token);
+    if (check.ok) {
+      ctx.secrets.update({ githubToken: token });
+    }
+    return c.json<SetupResultDto>({ ok: check.ok, message: check.message }, check.ok ? 200 : 400);
   });
 }

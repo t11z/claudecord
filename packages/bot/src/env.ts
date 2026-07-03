@@ -5,6 +5,12 @@ const envSchema = z.object({
   ANTHROPIC_API_KEY: z.string().min(1).optional(),
   DISCORD_BOT_TOKEN: z.string().min(1).optional(),
   DISCORD_APPLICATION_ID: z.string().min(1).optional(),
+  /**
+   * GitHub token for `git`/`gh` inside agentic runs. GH_TOKEN is accepted as
+   * an alias so an existing gh setup works unchanged; GITHUB_TOKEN wins.
+   */
+  GITHUB_TOKEN: z.string().min(1).optional(),
+  GH_TOKEN: z.string().min(1).optional(),
   DASHBOARD_HOST: z.string().default("127.0.0.1"),
   DASHBOARD_PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   DASHBOARD_PASSWORD: z.string().min(8).optional(),

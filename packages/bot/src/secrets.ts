@@ -12,6 +12,12 @@ export interface StoredSecrets {
   anthropicApiKey?: string;
   discordBotToken?: string;
   discordApplicationId?: string;
+  /**
+   * GitHub token (classic PAT, fine-grained PAT or app token). Wired into
+   * agentic runs as GH_TOKEN/GITHUB_TOKEN so `git` and `gh` can reach the
+   * repositories the token grants access to.
+   */
+  githubToken?: string;
   /** Auto-generated when DASHBOARD_PASSWORD is unset on a non-localhost bind. */
   dashboardPassword?: string;
 }
@@ -50,6 +56,7 @@ export interface EffectiveCredentials {
   apiKey?: string | undefined;
   discordBotToken?: string | undefined;
   discordApplicationId?: string | undefined;
+  githubToken?: string | undefined;
   authMethod: AuthMethod;
 }
 
@@ -59,6 +66,8 @@ export function resolveCredentials(
     ANTHROPIC_API_KEY?: string | undefined;
     DISCORD_BOT_TOKEN?: string | undefined;
     DISCORD_APPLICATION_ID?: string | undefined;
+    GITHUB_TOKEN?: string | undefined;
+    GH_TOKEN?: string | undefined;
   },
   stored: StoredSecrets,
 ): EffectiveCredentials {
@@ -69,6 +78,7 @@ export function resolveCredentials(
     apiKey,
     discordBotToken: env.DISCORD_BOT_TOKEN ?? stored.discordBotToken,
     discordApplicationId: env.DISCORD_APPLICATION_ID ?? stored.discordApplicationId,
+    githubToken: env.GITHUB_TOKEN ?? env.GH_TOKEN ?? stored.githubToken,
     authMethod: oauthToken ? "oauth" : apiKey ? "api-key" : "none",
   };
 }

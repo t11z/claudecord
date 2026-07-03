@@ -57,7 +57,7 @@ export function createContext(env: Env, logger: Logger): AppContext {
     credentials,
     engine: createClaudeEngine(() => {
       const c = credentials();
-      return { oauthToken: c.oauthToken, apiKey: c.apiKey };
+      return { oauthToken: c.oauthToken, apiKey: c.apiKey, githubToken: c.githubToken };
     }),
     queue: new RunQueue(env.MAX_CONCURRENT_RUNS),
     activeRuns: new Map(),

@@ -61,8 +61,13 @@ export function Overview() {
         </p>
         <p class="muted">
           Default model: <code>{status.defaultModel}</code> · Bot:{" "}
-          {status.botUser ? <code>{status.botUser.tag}</code> : "not connected"} · Version:{" "}
-          <code>{status.version}</code>
+          {status.botUser ? <code>{status.botUser.tag}</code> : "not connected"} · GitHub:{" "}
+          {status.githubConfigured ? (
+            <Badge kind="ok">token configured</Badge>
+          ) : (
+            <Badge kind="info">not configured</Badge>
+          )}{" "}
+          · Version: <code>{status.version}</code>
         </p>
         {status.authMethod === "none" || !status.discordConnected ? (
           <p>

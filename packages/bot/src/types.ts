@@ -14,6 +14,8 @@ export interface StatusDto {
   uptimeSeconds: number;
   authMethod: AuthMethod;
   authValid: boolean | null;
+  /** Whether a GitHub token is configured (env or secrets store). */
+  githubConfigured: boolean;
   defaultModel: string;
   queueDepth: number;
   activeRuns: number;

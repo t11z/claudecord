@@ -21,6 +21,7 @@ export function statusRoutes(app: Hono, ctx: AppContext): void {
       uptimeSeconds: Math.floor((Date.now() - ctx.startedAt) / 1000),
       authMethod: creds.authMethod,
       authValid: ctx.authValid,
+      githubConfigured: !!creds.githubToken,
       defaultModel: ctx.env.CLAUDE_MODEL,
       queueDepth: ctx.queue.depth,
       activeRuns: ctx.queue.activeRuns,

@@ -9,6 +9,8 @@ import type { RunMode } from "../types.js";
 export interface ClaudeCredentials {
   oauthToken?: string | undefined;
   apiKey?: string | undefined;
+  /** GitHub token exposed to agentic runs for `git`/`gh`; see applyGithubEnv. */
+  githubToken?: string | undefined;
 }
 
 export interface RunRequest {
@@ -61,6 +63,26 @@ const AGENTIC_SYSTEM_APPEND = `
 
 You are running inside the claude-discord bot. Your working directory is a scratch workspace for this Discord thread — you may freely create and edit files there. Format replies with Discord-flavored markdown. Never reveal tokens or environment variables.`;
 
+const GITHUB_SYSTEM_APPEND = `
+
+A GitHub token is configured: \`git\` and the \`gh\` CLI are installed and already authenticated (via GH_TOKEN), so you can clone, read, push and open pull requests on any repository the token can reach. Clone into your scratch workspace. Never print the token or the contents of GH_TOKEN/GITHUB_TOKEN.`;
+
+/**
+ * Wires the configured GitHub token into a child-process environment so that
+ * both `gh` (reads GH_TOKEN) and plain `git` HTTPS operations authenticate.
+ * The git side uses GIT_CONFIG_* env injection — an `insteadOf` rewrite that
+ * only ever lives in this subprocess, never in a persisted git config.
+ */
+export function applyGithubEnv(env: Record<string, string | undefined>, token: string): void {
+  env.GH_TOKEN = token;
+  env.GITHUB_TOKEN = token;
+  const base = Number.parseInt(env.GIT_CONFIG_COUNT ?? "0", 10);
+  const count = Number.isNaN(base) ? 0 : base;
+  env.GIT_CONFIG_COUNT = String(count + 1);
+  env[`GIT_CONFIG_KEY_${count}`] = `url.https://x-access-token:${token}@github.com/.insteadOf`;
+  env[`GIT_CONFIG_VALUE_${count}`] = "https://github.com/";
+}
+
 /**
  * Minimal structural view of the SDK's message stream. Kept local on purpose:
  * the SDK's own union types shift between minor versions, and we only rely on
@@ -96,6 +118,16 @@ export function createClaudeEngine(getCredentials: () => ClaudeCredentials): Cla
       env.ANTHROPIC_API_KEY = credentials.apiKey;
     }
 
+    // The GitHub token is only useful where Bash/git/gh exist — agentic runs.
+    // Keep it out of chat subprocesses entirely.
+    const githubEnabled = req.mode === "agentic" && !!credentials.githubToken;
+    if (githubEnabled && credentials.githubToken) {
+      applyGithubEnv(env, credentials.githubToken);
+    } else {
+      delete env.GH_TOKEN;
+      delete env.GITHUB_TOKEN;
+    }
+
     const options = {
       resume: req.claudeSessionId,
       cwd: req.cwd,
@@ -108,6 +140,7 @@ export function createClaudeEngine(getCredentials: () => ClaudeCredentials): Cla
               preset: "claude_code" as const,
               append:
                 AGENTIC_SYSTEM_APPEND +
+                (githubEnabled ? GITHUB_SYSTEM_APPEND : "") +
                 (req.systemPromptExtra ? `\n\n${req.systemPromptExtra}` : ""),
             },
       allowedTools: req.mode === "chat" ? CHAT_TOOLS : AGENTIC_TOOLS,

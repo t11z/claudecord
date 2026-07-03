@@ -67,4 +67,6 @@ export const api = {
   checkAuth: () => request<SetupResultDto>("POST", "/api/setup/check-auth"),
   setupDiscordToken: (token: string, applicationId: string) =>
     request<SetupResultDto>("POST", "/api/setup/discord-token", { token, applicationId }),
+  setupGithubToken: (token: string) =>
+    request<SetupResultDto>("POST", "/api/setup/github-token", { token }),
 };

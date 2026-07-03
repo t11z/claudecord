@@ -45,6 +45,7 @@ Claude remembers all of it, even across bot restarts.
 | 📎 **Attachments** | Send text files and images; long answers come back as `response.md` |
 | 🎛️ **Admin dashboard** | Setup wizard, channel/role allowlists, live sessions, usage stats — in a Claude×Discord themed UI |
 | 🤖 **Agentic mode (opt-in)** | File & shell tools in per-thread sandboxes. Off by default, admin-gated, Docker-first |
+| 🐙 **GitHub integration (opt-in)** | Give it a token and agentic threads clone, push & open PRs via `git`/`gh`. Fine-grained tokens encouraged |
 | 🚦 **Limit-aware** | Per-server queue, friendly "resets at 3pm" messages, `/usage` command |
 | 🐳 **One-container deploy** | `docker compose up -d` and you're live |
 

@@ -23,6 +23,7 @@ export default defineConfig({
             { label: "Configuration", slug: "guide/configuration" },
             { label: "Talking to Claude", slug: "guide/usage" },
             { label: "Access control & agentic mode", slug: "guide/access-control" },
+            { label: "GitHub integration", slug: "guide/github-integration" },
             { label: "Deployment", slug: "guide/deployment" },
             { label: "Troubleshooting", slug: "guide/troubleshooting" },
           ],
