@@ -26,7 +26,7 @@ export function statusRoutes(app: Hono, ctx: AppContext): void {
       queueDepth: ctx.queue.depth,
       activeRuns: ctx.queue.activeRuns,
       inviteUrl: appId ? buildInviteUrl(appId) : null,
-      version: process.env.npm_package_version ?? "dev",
+      version: ctx.env.APP_VERSION ?? process.env.npm_package_version ?? "dev",
     };
     return c.json(dto);
   });
