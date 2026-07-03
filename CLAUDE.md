@@ -11,6 +11,7 @@ Self-hosted @claude for Discord. Mention the bot → it opens a thread → Claud
 - `npm run typecheck` — tsc --noEmit (bot + dashboard)
 - `npm run build` — dashboard → `packages/bot/public/`, then bot → `dist/`
 - Run a single test file: `npm test -w @claude-discord/bot -- tests/splitter.test.ts`
+- `/new-slash-command` — scaffolds a new Discord slash command (file + registration + docs)
 
 ## Layout
 
