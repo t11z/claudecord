@@ -13,9 +13,13 @@ permissions:
   pages: write
   id-token: write
 
+# Allow only one concurrent deployment, but do NOT cancel an in-progress run:
+# cancelling a Pages deploy mid-flight leaves GitHub's backend with a stuck
+# deployment, after which every subsequent run fails with
+# "Deployment failed, try again later." Let production deploys complete.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
