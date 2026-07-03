@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://t11z.github.io/claude-discord/
+    about: Setup guides, configuration reference and troubleshooting
+  - name: Questions & ideas
+    url: https://github.com/t11z/claude-discord/discussions
+    about: Ask questions and discuss ideas before opening an issue

@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 320" width="1200" height="320" role="img" aria-label="claude-discord — @claude for Discord">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F5F3EB"/>
+      <stop offset="1" stop-color="#EDEAE0"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#D97757"/>
+      <stop offset="1" stop-color="#5865F2"/>
+    </linearGradient>
+    <linearGradient id="bubble" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#D97757"/>
+      <stop offset="1" stop-color="#B85C3E"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="320" rx="16" fill="url(#bg)"/>
+
+  <!-- decorative starbursts -->
+  <g fill="#D97757" opacity="0.12">
+    <path d="M0-46 9.2-12.8 43.7-14.1 15.1 5 27 37.2 0 15.9 -27 37.2 -15.1 5 -43.7-14.1 -9.2-12.8Z" transform="translate(1050,80)"/>
+  </g>
+  <g fill="#5865F2" opacity="0.10">
+    <path d="M0-46 9.2-12.8 43.7-14.1 15.1 5 27 37.2 0 15.9 -27 37.2 -15.1 5 -43.7-14.1 -9.2-12.8Z" transform="translate(140,265) scale(0.7)"/>
+  </g>
+
+  <!-- chat mock: user message -->
+  <g transform="translate(730,74)">
+    <rect width="360" height="64" rx="14" fill="#5865F2"/>
+    <text x="22" y="27" font-family="system-ui,-apple-system,'Segoe UI',sans-serif" font-size="16" fill="#DDE1FF">you</text>
+    <text x="22" y="49" font-family="system-ui,-apple-system,'Segoe UI',sans-serif" font-size="17" fill="#FFFFFF">@claude how do I center a div?</text>
+  </g>
+  <!-- chat mock: claude reply -->
+  <g transform="translate(770,156)">
+    <rect width="360" height="86" rx="14" fill="url(#bubble)"/>
+    <text x="22" y="28" font-family="Georgia,'Times New Roman',serif" font-size="16" fill="#FBE9E0" font-style="italic">Claude</text>
+    <text x="22" y="52" font-family="system-ui,-apple-system,'Segoe UI',sans-serif" font-size="16" fill="#FFF7F3">Ah, the ancient question. Three ways,</text>
+    <text x="22" y="72" font-family="system-ui,-apple-system,'Segoe UI',sans-serif" font-size="16" fill="#FFF7F3">starting with flexbox… ▌</text>
+  </g>
+  <!-- reactions -->
+  <g transform="translate(742,252)">
+    <rect width="46" height="26" rx="13" fill="#E4E1D5"/>
+    <text x="10" y="18" font-size="14">👀</text>
+    <rect x="52" width="46" height="26" rx="13" fill="#E4E1D5"/>
+    <text x="62" y="18" font-size="14">✅</text>
+  </g>
+
+  <!-- wordmark -->
+  <text x="70" y="140" font-family="Georgia,'Times New Roman',serif" font-size="64" font-weight="600" fill="#2A2A26">claude-<tspan fill="#5865F2">discord</tspan></text>
+  <rect x="72" y="162" width="330" height="5" rx="2.5" fill="url(#accent)"/>
+  <text x="70" y="204" font-family="system-ui,-apple-system,'Segoe UI',sans-serif" font-size="22" fill="#6F6C63">Mention the bot. Get Claude. In a thread, with memory.</text>
+  <text x="70" y="248" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="17" fill="#8A867A">self-hosted · your Claude subscription · no API key</text>
+</svg>
