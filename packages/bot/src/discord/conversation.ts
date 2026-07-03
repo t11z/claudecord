@@ -135,10 +135,11 @@ export async function runConversationTurn(
 
   try {
     if (asAttachment) {
-      const file = new AttachmentBuilder(Buffer.from(result.text, "utf8"), {
+      const file = new AttachmentBuilder(Buffer.from(result.text + notes, "utf8"), {
         name: "response.md",
       });
-      const summary = `${result.text.slice(0, DISCORD_MESSAGE_LIMIT - 120).trimEnd()}…`;
+      const previewLimit = Math.max(0, DISCORD_MESSAGE_LIMIT - 120 - notes.length);
+      const summary = `${result.text.slice(0, previewLimit).trimEnd()}…${notes}`;
       await placeholder.edit({
         content: `The full answer is attached.\n\n${summary}`.slice(0, DISCORD_MESSAGE_LIMIT),
         files: [file],
