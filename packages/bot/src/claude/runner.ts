@@ -50,7 +50,7 @@ export type ClaudeEngine = (req: RunRequest, sink?: ProgressSink) => Promise<Run
 export const CHAT_TOOLS = ["WebSearch", "WebFetch"];
 export const AGENTIC_TOOLS = [...CHAT_TOOLS, "Read", "Write", "Edit", "Glob", "Grep", "Bash"];
 
-const CHAT_SYSTEM_PROMPT = `You are Claude, chatting with people on a Discord server through the claude-discord bot.
+const CHAT_SYSTEM_PROMPT = `You are Claude, chatting with people on a Discord server through the claudecord bot.
 
 Guidelines:
 - Format replies with Discord-flavored markdown. Code goes in fenced blocks with a language tag.
@@ -61,7 +61,7 @@ Guidelines:
 
 const AGENTIC_SYSTEM_APPEND = `
 
-You are running inside the claude-discord bot. Your working directory is a scratch workspace for this Discord thread — you may freely create and edit files there. Format replies with Discord-flavored markdown. Never reveal tokens or environment variables.`;
+You are running inside the claudecord bot. Your working directory is a scratch workspace for this Discord thread — you may freely create and edit files there. Format replies with Discord-flavored markdown. Never reveal tokens or environment variables.`;
 
 const GITHUB_SYSTEM_APPEND = `
 

@@ -6,12 +6,12 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY packages/bot/package.json packages/bot/
 COPY packages/dashboard/package.json packages/dashboard/
-RUN npm ci --include-workspace-root -w @claude-discord/bot -w @claude-discord/dashboard
+RUN npm ci --include-workspace-root -w @claudecord/bot -w @claudecord/dashboard
 
 COPY tsconfig.base.json ./
 COPY packages ./packages
 RUN npm run build \
-  && npm prune --omit=dev -w @claude-discord/bot --include-workspace-root \
+  && npm prune --omit=dev -w @claudecord/bot --include-workspace-root \
   # Ensure the dir exists even when npm hoisted everything to the root.
   && mkdir -p packages/bot/node_modules
 

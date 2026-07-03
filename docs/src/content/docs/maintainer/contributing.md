@@ -4,7 +4,7 @@ description: Dev setup, testing philosophy and how to find something to work on.
 ---
 
 The short version lives in
-[CONTRIBUTING.md](https://github.com/t11z/claude-discord/blob/main/CONTRIBUTING.md);
+[CONTRIBUTING.md](https://github.com/t11z/claudecord/blob/main/CONTRIBUTING.md);
 this page adds the maintainer-level context.
 
 ## Dev setup
@@ -42,7 +42,7 @@ smoke test in the PR (mention → thread → follow-up → resume works).
 - `good first issue` — scoped, with pointers into the code. Add these
   generously when triaging; they're the project's front door.
 - `help wanted` — bigger but self-contained.
-- `security` — see [SECURITY.md](https://github.com/t11z/claude-discord/blob/main/SECURITY.md);
+- `security` — see [SECURITY.md](https://github.com/t11z/claudecord/blob/main/SECURITY.md);
   never discuss exploits in public issues.
 
 ## Ideas looking for owners

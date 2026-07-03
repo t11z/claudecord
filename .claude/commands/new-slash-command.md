@@ -3,7 +3,7 @@ description: Scaffold a new Discord slash command for the bot, following the exi
 argument-hint: <command-name> <what it should do>
 ---
 
-Scaffold a new Discord slash command for claude-discord.
+Scaffold a new Discord slash command for claudecord.
 
 Command spec (ask the user for anything missing — name, one-line description,
 options/subcommands, whether it's admin-only): $ARGUMENTS
@@ -39,7 +39,7 @@ options/subcommands, whether it's admin-only): $ARGUMENTS
      `docs/src/content/docs/guide/access-control.md` where relevant
 
 5. Verify: `npm run lint && npm run typecheck` from the repo root (or
-   `-w @claude-discord/bot` for just the bot package). If the command has
+   `-w @claudecord/bot` for just the bot package). If the command has
    non-trivial logic beyond simple repo calls, flag to the user that it may
    be worth a unit test — most existing command files aren't unit-tested
    directly since they're thin wrappers around already-tested repos/engine.

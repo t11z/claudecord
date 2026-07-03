@@ -2,7 +2,7 @@
   "name": "docs",
   "version": "0.1.0",
   "private": true,
-  "description": "claude-discord documentation site (Astro Starlight).",
+  "description": "claudecord documentation site (Astro Starlight).",
   "license": "MIT",
   "type": "module",
   "scripts": {

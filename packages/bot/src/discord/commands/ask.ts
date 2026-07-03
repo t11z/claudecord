@@ -32,7 +32,7 @@ export const ask: Command = {
     await interaction.deferReply({ ephemeral: isPrivate });
 
     const config = ctx.repos.guildConfig.get(interaction.guildId);
-    const cwd = path.join(os.tmpdir(), "claude-discord-ask");
+    const cwd = path.join(os.tmpdir(), "claudecord-ask");
     fs.mkdirSync(cwd, { recursive: true });
 
     const startedAt = new Date().toISOString();

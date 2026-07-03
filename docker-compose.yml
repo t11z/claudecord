@@ -1,7 +1,7 @@
 services:
   bot:
     build: .
-    container_name: claude-discord
+    container_name: claudecord
     restart: unless-stopped
     # The dashboard is only reachable from the host machine itself. To expose
     # it further, change the mapping AND set DASHBOARD_PASSWORD (the bot
@@ -13,11 +13,11 @@ services:
         required: false
     volumes:
       # SQLite database, secrets.json, per-thread workspaces
-      - claude-discord-data:/data
+      - claudecord-data:/data
       # Claude Code session storage — REQUIRED for conversations to survive
       # container restarts.
-      - claude-discord-claude:/home/bot/.claude
+      - claudecord-claude:/home/bot/.claude
 
 volumes:
-  claude-discord-data:
-  claude-discord-claude:
+  claudecord-data:
+  claudecord-claude:

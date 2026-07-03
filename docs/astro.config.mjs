@@ -3,16 +3,16 @@ import { defineConfig } from "astro/config";
 
 export default defineConfig({
   site: "https://t11z.github.io",
-  base: "/claude-discord",
+  base: "/claudecord",
   integrations: [
     starlight({
-      title: "claude-discord",
+      title: "claudecord",
       description:
         "Self-hosted @claude for Discord — mention the bot, get Claude. Powered by your Claude Code OAuth token.",
       customCss: ["./src/styles/theme.css"],
-      social: [{ icon: "github", label: "GitHub", href: "https://github.com/t11z/claude-discord" }],
+      social: [{ icon: "github", label: "GitHub", href: "https://github.com/t11z/claudecord" }],
       editLink: {
-        baseUrl: "https://github.com/t11z/claude-discord/edit/main/docs/",
+        baseUrl: "https://github.com/t11z/claudecord/edit/main/docs/",
       },
       sidebar: [
         {

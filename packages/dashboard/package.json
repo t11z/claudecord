@@ -1,8 +1,8 @@
 {
-  "name": "@claude-discord/dashboard",
+  "name": "@claudecord/dashboard",
   "version": "0.1.0",
   "private": true,
-  "description": "Admin dashboard frontend for claude-discord (Preact + Vite).",
+  "description": "Admin dashboard frontend for claudecord (Preact + Vite).",
   "license": "MIT",
   "type": "module",
   "scripts": {

@@ -3,7 +3,7 @@ import type { Context, Next } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import type { AppContext } from "../context.js";
 
-const COOKIE_NAME = "claude_discord_session";
+const COOKIE_NAME = "claudecord_session";
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 
 function hmac(secret: string, payload: string): string {

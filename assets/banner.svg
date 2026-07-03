@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 320" width="1200" height="320" role="img" aria-label="claude-discord — @claude for Discord">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 320" width="1200" height="320" role="img" aria-label="claudecord — @claude for Discord">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#F5F3EB"/>
@@ -46,8 +46,8 @@
   </g>
 
   <!-- wordmark -->
-  <text x="70" y="140" font-family="Georgia,'Times New Roman',serif" font-size="64" font-weight="600" fill="#2A2A26">claude-<tspan fill="#5865F2">discord</tspan></text>
-  <rect x="72" y="162" width="330" height="5" rx="2.5" fill="url(#accent)"/>
+  <text x="70" y="140" font-family="Georgia,'Times New Roman',serif" font-size="64" font-weight="600" fill="#2A2A26">claude<tspan fill="#5865F2">cord</tspan></text>
+  <rect x="72" y="162" width="255" height="5" rx="2.5" fill="url(#accent)"/>
   <text x="70" y="204" font-family="system-ui,-apple-system,'Segoe UI',sans-serif" font-size="22" fill="#6F6C63">Mention the bot. Get Claude. In a thread, with memory.</text>
   <text x="70" y="248" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="17" fill="#8A867A">self-hosted · your Claude subscription · no API key</text>
 </svg>

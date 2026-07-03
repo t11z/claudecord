@@ -58,7 +58,7 @@ Existing threads keep their mode; the toggle affects new threads.
 ## GitHub access
 
 Agentic mode is also the prerequisite for the optional
-[GitHub integration](/claude-discord/guide/github-integration/): with a token
+[GitHub integration](/claudecord/guide/github-integration/): with a token
 configured, agentic threads can clone, push and open pull requests on your
 repositories via `git` and `gh`. Scope the token tightly and read that page's
 security note before enabling it.

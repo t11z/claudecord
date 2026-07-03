@@ -38,8 +38,8 @@ Starlight `:::note` when necessary.
 Pushing a tag matching `v*.*.*` (optionally with a `-rc.1`-style suffix)
 triggers `.github/workflows/release.yml`, which builds a **multi-arch image
 (`linux/amd64` + `linux/arm64`)** via Buildx/QEMU and pushes it to
-[GHCR](https://github.com/t11z/claude-discord/pkgs/container/claude-discord)
-as `ghcr.io/t11z/claude-discord`.
+[GHCR](https://github.com/t11z/claudecord/pkgs/container/claudecord)
+as `ghcr.io/t11z/claudecord`.
 
 Tags produced from `v1.2.3`:
 

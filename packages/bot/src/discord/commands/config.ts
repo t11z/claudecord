@@ -10,7 +10,7 @@ function formatList(ids: string[], prefix: string): string {
 export const config: Command = {
   data: new SlashCommandBuilder()
     .setName("config")
-    .setDescription("Configure claude-discord for this server (admins only)")
+    .setDescription("Configure claudecord for this server (admins only)")
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addSubcommand((s) => s.setName("show").setDescription("Show the current configuration"))
     .addSubcommand((s) =>
@@ -62,7 +62,7 @@ export const config: Command = {
         await interaction.reply({
           ephemeral: true,
           content: [
-            `**claude-discord configuration**`,
+            `**claudecord configuration**`,
             `Enabled: ${cfg.enabled ? "✅" : "❌"}`,
             `Allowed channels: ${formatList(cfg.allowedChannelIds, "#")}`,
             `Allowed roles: ${formatList(cfg.allowedRoleIds, "@&")}`,

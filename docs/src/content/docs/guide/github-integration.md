@@ -10,7 +10,7 @@ make changes, push a branch and open a pull request — all through the
 
 ## Requirements
 
-GitHub access only works in **[agentic mode](/claude-discord/guide/access-control/)**,
+GitHub access only works in **[agentic mode](/claudecord/guide/access-control/)**,
 because that is what grants Claude the `Bash` tool it needs to run `git` and
 `gh`. Enable agentic mode per server (dashboard → Access control, or
 `/config agentic true`) before the token has any effect.

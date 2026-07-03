@@ -3,7 +3,7 @@
 ## Reporting a vulnerability
 
 Please **do not** open a public issue for security problems. Instead, use
-[GitHub private vulnerability reporting](https://github.com/t11z/claude-discord/security/advisories/new)
+[GitHub private vulnerability reporting](https://github.com/t11z/claudecord/security/advisories/new)
 so we can fix the issue before it is disclosed.
 
 You can expect an initial response within a week. Please include reproduction
@@ -11,7 +11,7 @@ steps and the deployment method (Docker or bare npm).
 
 ## Threat model — read this before enabling agentic mode
 
-claude-discord has two capability modes:
+claudecord has two capability modes:
 
 - **Chat mode (default):** Claude can only converse and use web search/fetch.
   Prompt injection by Discord users can at worst produce bad text.

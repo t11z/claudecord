@@ -6,8 +6,8 @@ description: Docker Compose (recommended), bare Node, volumes and updating.
 ## Docker Compose (recommended)
 
 ```bash
-git clone https://github.com/t11z/claude-discord.git
-cd claude-discord
+git clone https://github.com/t11z/claudecord.git
+cd claudecord
 docker compose up -d
 ```
 
@@ -21,8 +21,8 @@ The compose file mounts two volumes. Both matter:
 
 | Volume | Contains | If you lose it |
 | --- | --- | --- |
-| `claude-discord-data` → `/data` | SQLite DB, secrets, per-thread workspaces | all config & thread mappings gone |
-| `claude-discord-claude` → `/home/bot/.claude` | Claude Code's session storage | **every conversation forgets its history on restart** |
+| `claudecord-data` → `/data` | SQLite DB, secrets, per-thread workspaces | all config & thread mappings gone |
+| `claudecord-claude` → `/home/bot/.claude` | Claude Code's session storage | **every conversation forgets its history on restart** |
 
 Claude Code persists conversation state on disk, keyed by each session's
 working directory. That's why `~/.claude` needs a volume and why the bot

@@ -52,7 +52,7 @@ function Login(props: { onSuccess: () => void }) {
         <Card>
           <div class="brand" style="padding:0 0 0.8rem">
             <div class="brand-mark">C</div>
-            <strong>claude-discord</strong>
+            <strong>claudecord</strong>
           </div>
           <form onSubmit={(e) => void submit(e)}>
             <label class="field">
@@ -97,7 +97,7 @@ function App() {
         <div class="brand">
           <div class="brand-mark">C</div>
           <span>
-            claude-<strong>discord</strong>
+            claude<strong>cord</strong>
           </span>
         </div>
         {ROUTES.map((r) => (
@@ -106,12 +106,7 @@ function App() {
           </a>
         ))}
         <div style="flex:1" />
-        <a
-          class="nav"
-          href="https://t11z.github.io/claude-discord/"
-          target="_blank"
-          rel="noreferrer"
-        >
+        <a class="nav" href="https://t11z.github.io/claudecord/" target="_blank" rel="noreferrer">
           Docs ↗
         </a>
       </nav>

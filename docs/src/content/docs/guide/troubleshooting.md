@@ -40,7 +40,7 @@ queue briefly. Options: wait, switch new conversations to a lighter model
 ## Conversations lose their memory after a restart (Docker)
 
 The `~/.claude` volume is missing, so Claude Code's session files died with
-the container. See [Deployment](/claude-discord/guide/deployment/#volumes--do-not-skip-this).
+the container. See [Deployment](/claudecord/guide/deployment/#volumes--do-not-skip-this).
 
 ## The dashboard shows "unauthorized" / won't load remotely
 

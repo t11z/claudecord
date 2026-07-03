@@ -7,7 +7,7 @@ export type { Database };
 
 export function openDatabase(dataDir: string): Database {
   fs.mkdirSync(dataDir, { recursive: true });
-  const db = new SqliteDatabase(path.join(dataDir, "claude-discord.sqlite"));
+  const db = new SqliteDatabase(path.join(dataDir, "claudecord.sqlite"));
   db.pragma("journal_mode = WAL");
   db.pragma("foreign_keys = ON");
   runMigrations(db);

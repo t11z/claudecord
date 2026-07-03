@@ -1,7 +1,7 @@
 import { EmbedBuilder, SlashCommandBuilder } from "discord.js";
 import type { Command } from "./types.js";
 
-const DOCS_URL = "https://t11z.github.io/claude-discord/";
+const DOCS_URL = "https://t11z.github.io/claudecord/";
 
 export const help: Command = {
   data: new SlashCommandBuilder()
@@ -30,7 +30,7 @@ export const help: Command = {
         { name: "/model", value: "Pick the model (admins)", inline: true },
         { name: "/config", value: "Allowlists & agentic mode (admins)", inline: true },
       )
-      .setFooter({ text: `Self-hosted claude-discord • Docs: ${DOCS_URL}` });
+      .setFooter({ text: `Self-hosted claudecord • Docs: ${DOCS_URL}` });
 
     await interaction.reply({ embeds: [embed], ephemeral: true });
   },

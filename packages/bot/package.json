@@ -1,8 +1,8 @@
 {
-  "name": "@claude-discord/bot",
+  "name": "@claudecord/bot",
   "version": "0.1.0",
   "private": true,
-  "description": "The claude-discord bot process: Discord client, Claude Agent SDK runner and admin dashboard server.",
+  "description": "The claudecord bot process: Discord client, Claude Agent SDK runner and admin dashboard server.",
   "license": "MIT",
   "type": "module",
   "main": "dist/index.js",

@@ -1,4 +1,4 @@
-# Contributing to claude-discord
+# Contributing to claudecord
 
 Thanks for your interest — contributions of every size are welcome, from typo
 fixes to new features. This guide gets you from clone to green PR.
@@ -8,8 +8,8 @@ fixes to new features. This guide gets you from clone to green PR.
 Prerequisites: **Node.js ≥ 20** and npm.
 
 ```bash
-git clone https://github.com/t11z/claude-discord.git
-cd claude-discord
+git clone https://github.com/t11z/claudecord.git
+cd claudecord
 npm install
 cp .env.example .env   # fill in at least DISCORD_BOT_TOKEN + a Claude credential
 npm run dev            # starts the bot with tsx watch
@@ -37,7 +37,7 @@ Claude Agent SDK and Discord entirely.
 | `docs/` | Astro Starlight documentation site (GitHub Pages) |
 
 A deeper tour lives in the
-[Maintainer Guide](https://t11z.github.io/claude-discord/maintainer/architecture/).
+[Maintainer Guide](https://t11z.github.io/claudecord/maintainer/architecture/).
 
 ## Checks
 
@@ -70,9 +70,9 @@ npm run build       # dashboard + bot production build
 
 ## Where to start
 
-- Issues labeled [`good first issue`](https://github.com/t11z/claude-discord/labels/good%20first%20issue)
+- Issues labeled [`good first issue`](https://github.com/t11z/claudecord/labels/good%20first%20issue)
   are scoped for newcomers and include pointers into the code.
-- [`help wanted`](https://github.com/t11z/claude-discord/labels/help%20wanted)
+- [`help wanted`](https://github.com/t11z/claudecord/labels/help%20wanted)
   issues are larger but self-contained.
 - Not sure? Open a discussion or a draft PR early — we're happy to help you
   land it.

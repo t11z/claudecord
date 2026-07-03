@@ -1,4 +1,4 @@
-# claude-discord
+# claudecord
 
 Self-hosted @claude for Discord. Mention the bot → it opens a thread → Claude answers with per-thread memory. Engine is the Claude Agent SDK (wraps the Claude Code CLI), auth via `CLAUDE_CODE_OAUTH_TOKEN` (subscription) or `ANTHROPIC_API_KEY` fallback.
 
@@ -10,7 +10,7 @@ Self-hosted @claude for Discord. Mention the bot → it opens a thread → Claud
 - `npm run lint` / `npm run lint:fix` — Biome (lint + format, no ESLint/Prettier)
 - `npm run typecheck` — tsc --noEmit (bot + dashboard)
 - `npm run build` — dashboard → `packages/bot/public/`, then bot → `dist/`
-- Run a single test file: `npm test -w @claude-discord/bot -- tests/splitter.test.ts`
+- Run a single test file: `npm test -w @claudecord/bot -- tests/splitter.test.ts`
 - `/new-slash-command` — scaffolds a new Discord slash command (file + registration + docs)
 
 ## Layout

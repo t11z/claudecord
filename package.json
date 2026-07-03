@@ -1,5 +1,5 @@
 {
-  "name": "claude-discord",
+  "name": "claudecord",
   "private": true,
   "version": "0.1.0",
   "description": "Self-hosted @claude for Discord — mention the bot, get Claude. Powered by your Claude Code OAuth token.",
@@ -13,14 +13,14 @@
     "docs"
   ],
   "scripts": {
-    "dev": "npm run dev -w @claude-discord/bot",
-    "dev:dashboard": "npm run dev -w @claude-discord/dashboard",
-    "build": "npm run build -w @claude-discord/dashboard && npm run build -w @claude-discord/bot",
-    "start": "npm run start -w @claude-discord/bot",
+    "dev": "npm run dev -w @claudecord/bot",
+    "dev:dashboard": "npm run dev -w @claudecord/dashboard",
+    "build": "npm run build -w @claudecord/dashboard && npm run build -w @claudecord/bot",
+    "start": "npm run start -w @claudecord/bot",
     "lint": "biome ci .",
     "lint:fix": "biome check --write .",
-    "typecheck": "npm run typecheck -w @claude-discord/bot && npm run typecheck -w @claude-discord/dashboard",
-    "test": "npm run test -w @claude-discord/bot",
+    "typecheck": "npm run typecheck -w @claudecord/bot && npm run typecheck -w @claudecord/dashboard",
+    "test": "npm run test -w @claudecord/bot",
     "docs:dev": "npm run dev -w docs",
     "docs:build": "npm run build -w docs"
   },

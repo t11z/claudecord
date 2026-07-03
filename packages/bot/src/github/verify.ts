@@ -19,7 +19,7 @@ export async function checkGithubToken(token: string): Promise<GithubCheckResult
       headers: {
         Authorization: `Bearer ${token}`,
         Accept: "application/vnd.github+json",
-        "User-Agent": "claude-discord",
+        "User-Agent": "claudecord",
         "X-GitHub-Api-Version": "2022-11-28",
       },
     });

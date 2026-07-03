@@ -15,7 +15,7 @@ export interface AuthCheckResult {
  */
 export async function checkClaudeAuth(engine: ClaudeEngine): Promise<AuthCheckResult> {
   try {
-    const cwd = path.join(os.tmpdir(), "claude-discord-authcheck");
+    const cwd = path.join(os.tmpdir(), "claudecord-authcheck");
     fs.mkdirSync(cwd, { recursive: true });
     const result = await engine({
       prompt: "Reply with the single word: ok",

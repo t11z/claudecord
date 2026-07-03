@@ -1,19 +1,19 @@
 <p align="center">
-  <img src="assets/banner.svg" alt="claude-discord — @claude for Discord" width="100%" />
+  <img src="assets/banner.svg" alt="claudecord — @claude for Discord" width="100%" />
 </p>
 
 <p align="center">
-  <a href="https://github.com/t11z/claude-discord/actions/workflows/ci.yml"><img src="https://github.com/t11z/claude-discord/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="https://github.com/t11z/claudecord/actions/workflows/ci.yml"><img src="https://github.com/t11z/claudecord/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-D97757" alt="MIT license" /></a>
-  <a href="https://t11z.github.io/claude-discord/"><img src="https://img.shields.io/badge/docs-github%20pages-5865F2" alt="Documentation" /></a>
-  <a href="https://github.com/t11z/claude-discord/pkgs/container/claude-discord"><img src="https://img.shields.io/badge/ghcr.io-amd64%20%7C%20arm64-D97757" alt="GHCR image (amd64 & arm64)" /></a>
+  <a href="https://t11z.github.io/claudecord/"><img src="https://img.shields.io/badge/docs-github%20pages-5865F2" alt="Documentation" /></a>
+  <a href="https://github.com/t11z/claudecord/pkgs/container/claudecord"><img src="https://img.shields.io/badge/ghcr.io-amd64%20%7C%20arm64-D97757" alt="GHCR image (amd64 & arm64)" /></a>
   <img src="https://img.shields.io/badge/node-%E2%89%A520-2ea44f" alt="Node >= 20" />
 </p>
 
 <h3 align="center">Mention the bot. Get Claude. In a thread, with memory.</h3>
 
 <p align="center">
-  <b>claude-discord</b> brings the <code>@claude</code> experience you know from GitHub to your Discord server —
+  <b>claudecord</b> brings the <code>@claude</code> experience you know from GitHub to your Discord server —
   self-hosted, open source, and powered by the <b>Claude subscription you already pay for</b>
   (via a Claude Code OAuth token) instead of a metered API key.
 </p>
@@ -58,8 +58,8 @@ Claude remembers all of it, even across bot restarts.
 claude setup-token
 
 # 2. Run the bot
-git clone https://github.com/t11z/claude-discord.git
-cd claude-discord
+git clone https://github.com/t11z/claudecord.git
+cd claudecord
 docker compose up -d
 
 # 3. Finish in the browser
@@ -68,7 +68,7 @@ open http://localhost:3000   # setup wizard: paste tokens, invite the bot
 
 Then mention the bot in any channel. That's it.
 
-📚 **[Full documentation →](https://t11z.github.io/claude-discord/)** — setup
+📚 **[Full documentation →](https://t11z.github.io/claudecord/)** — setup
 guides, configuration reference, security notes and maintainer docs.
 
 ## Commands
@@ -86,9 +86,9 @@ guides, configuration reference, security notes and maintainer docs.
 
 - **Agentic mode** gives Claude shell access inside a sandbox. It's off by
   default for a reason — read the
-  [security docs](https://t11z.github.io/claude-discord/guide/access-control/)
+  [security docs](https://t11z.github.io/claudecord/guide/access-control/)
   before enabling it, and run the bot in Docker.
-- claude-discord is designed for **personal servers and small communities**:
+- claudecord is designed for **personal servers and small communities**:
   you self-host it with *your own* token, and everyone who talks to the bot
   shares *your* subscription limits. It is not built to be a public bot
   service.
@@ -98,11 +98,11 @@ guides, configuration reference, security notes and maintainer docs.
 Contributions are very welcome — this project is deliberately built to be
 hackable: TypeScript everywhere, no ORM, no framework magic, pure functions
 where it counts, and a documented
-[architecture](https://t11z.github.io/claude-discord/maintainer/architecture/).
+[architecture](https://t11z.github.io/claudecord/maintainer/architecture/).
 
-- 🟢 Start with a [`good first issue`](https://github.com/t11z/claude-discord/labels/good%20first%20issue)
+- 🟢 Start with a [`good first issue`](https://github.com/t11z/claudecord/labels/good%20first%20issue)
 - 📖 Read [CONTRIBUTING.md](CONTRIBUTING.md) (5-minute dev setup)
-- 💬 Or just open a [discussion](https://github.com/t11z/claude-discord/discussions) — ideas welcome
+- 💬 Or just open a [discussion](https://github.com/t11z/claudecord/discussions) — ideas welcome
 
 ```bash
 npm install && npm run dev     # bot
