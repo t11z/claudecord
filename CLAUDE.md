@@ -34,5 +34,5 @@ npm workspaces, no monorepo tooling. `packages/bot` is the app (Discord client +
 - MessageContent is a privileged Discord intent — must be toggled in the Dev Portal or the client throws `Used disallowed intents` at login.
 - Each `query()` spawns a Claude Code CLI subprocess. The global semaphore (MAX_CONCURRENT_RUNS, default 4) is load-bearing; don't bypass the queue.
 - Rate-limit errors from the CLI arrive as unstructured text, not typed errors. `claude/errors.ts` parses defensively — add new patterns WITH a fixture test in `tests/errors.test.ts`.
-- Discord edits are rate-limited (~5/5s per channel). ThrottledEditor widens its interval on backpressure; never edit a message in a loop without it.
+- Discord edits are rate-limited (~5/5s per channel). `StreamingReply` (progress.ts) widens its interval on backpressure; never edit a message in a loop without it. The "working" signal is the native typing indicator (`TypingIndicator`), not a mutating placeholder — the streamed message is created lazily only once answer text arrives.
 - Docker needs volumes for BOTH `/data` and `/home/bot/.claude` — losing the latter kills all session resume.

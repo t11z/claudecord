@@ -17,6 +17,39 @@ export interface SplitResult {
 
 const FENCE_RE = /^\s{0,3}(```+|~~~+)(.*)$/;
 
+type OpenFence = { marker: string; info: string };
+
+/**
+ * Advances the open-fence state for one line. A fence closes only with the same
+ * character and an equal-or-longer run (CommonMark rule); an unrelated fence
+ * line inside an open block is ignored. Shared by splitMessage and closeOpenFences.
+ */
+function trackFence(open: OpenFence | null, line: string): OpenFence | null {
+  const match = line.match(FENCE_RE);
+  if (!match) return open;
+  const marker = match[1]!;
+  if (open && marker[0] === open.marker[0] && marker.length >= open.marker.length) {
+    return null;
+  }
+  if (!open) {
+    return { marker, info: match[2] ?? "" };
+  }
+  return open;
+}
+
+/**
+ * Closes a dangling code fence at the end of a partial markdown string so a
+ * mid-stream preview never renders a broken ``` block. Balanced text is
+ * returned unchanged.
+ */
+export function closeOpenFences(text: string): string {
+  let open: OpenFence | null = null;
+  for (const line of text.split("\n")) {
+    open = trackFence(open, line);
+  }
+  return open ? `${text}\n${open.marker}` : text;
+}
+
 export function splitMessage(text: string, limit = DISCORD_MESSAGE_LIMIT): SplitResult {
   const trimmed = text.trimEnd();
   if (trimmed.length === 0) {
@@ -29,7 +62,7 @@ export function splitMessage(text: string, limit = DISCORD_MESSAGE_LIMIT): Split
   const chunks: string[] = [];
   let buffer = "";
   // Fence state carried across lines: the exact marker (``` or ~~~) and info string.
-  let openFence: { marker: string; info: string } | null = null;
+  let openFence: OpenFence | null = null;
 
   const closeLen = () => (openFence ? openFence.marker.length + 1 : 0);
 
@@ -69,20 +102,8 @@ export function splitMessage(text: string, limit = DISCORD_MESSAGE_LIMIT): Split
   };
 
   for (const line of trimmed.split("\n")) {
-    const fenceMatch = line.match(FENCE_RE);
     append(line);
-    if (fenceMatch) {
-      const marker = fenceMatch[1]!;
-      if (
-        openFence &&
-        marker[0] === openFence.marker[0] &&
-        marker.length >= openFence.marker.length
-      ) {
-        openFence = null;
-      } else if (!openFence) {
-        openFence = { marker, info: fenceMatch[2] ?? "" };
-      }
-    }
+    openFence = trackFence(openFence, line);
   }
   if (buffer.length > 0) {
     let chunk = buffer;
