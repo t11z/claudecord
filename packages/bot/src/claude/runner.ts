@@ -5,6 +5,7 @@
  */
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import type { RunMode } from "../types.js";
+import { SegmentJoiner } from "./segments.js";
 
 export interface ClaudeCredentials {
   oauthToken?: string | undefined;
@@ -164,6 +165,9 @@ export function createClaudeEngine(getCredentials: () => ClaudeCredentials): Cla
     let sessionId: string | null = req.claudeSessionId ?? null;
     let finalText = "";
     let streamedText = "";
+    // Inserts a paragraph break between the narration segments Claude emits
+    // around tool calls, so the streamed preview reads as paragraphs.
+    const joiner = new SegmentJoiner();
     let ok = false;
     let errorText: string | null = null;
     let costUsd = 0;
@@ -183,18 +187,23 @@ export function createClaudeEngine(getCredentials: () => ClaudeCredentials): Cla
           case "stream_event": {
             const delta = msg.event?.delta;
             if (msg.event?.type === "content_block_delta" && delta?.type === "text_delta") {
-              const text = delta.text ?? "";
+              const text = joiner.push(delta.text ?? "");
               streamedText += text;
               sink?.onTextDelta?.(text);
             }
             break;
           }
           case "assistant": {
+            let sawToolUse = false;
             for (const block of msg.message?.content ?? []) {
               if (block.type === "tool_use" && block.name) {
+                sawToolUse = true;
                 sink?.onToolUse?.(block.name);
               }
             }
+            // A tool call ends the current narration segment; the next text
+            // block starts a new paragraph.
+            if (sawToolUse) joiner.boundary();
             break;
           }
           case "result": {
