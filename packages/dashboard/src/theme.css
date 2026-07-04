@@ -282,6 +282,17 @@ th {
   padding: 0.1rem 0.6rem;
 }
 
+/* Raw failure text in the recent-errors table: one clipped line, full text on hover. */
+.error-detail {
+  display: block;
+  max-width: 32rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
 .badge.ok {
   background: color-mix(in srgb, var(--ok) 15%, transparent);
   color: var(--ok);

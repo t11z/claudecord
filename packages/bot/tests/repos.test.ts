@@ -138,6 +138,26 @@ describe("UsageRepo", () => {
     expect(daily).toHaveLength(1);
     expect(daily[0]?.runs).toBe(1);
   });
+
+  it("persists and returns recent errors with correlation detail", () => {
+    const repo = new UsageRepo(openMemoryDatabase());
+    repo.record(entry);
+    repo.record({
+      ...entry,
+      ok: false,
+      errorKind: "max_turns",
+      runId: "run-123",
+      errorSubtype: "error_max_turns",
+      errorDetail: "error_max_turns — Reached the maximum number of turns (40)",
+    });
+    const since = new Date(Date.now() - 1000 * 60).toISOString();
+    const errors = repo.recentErrorsSince(since);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]?.runId).toBe("run-123");
+    expect(errors[0]?.kind).toBe("max_turns");
+    expect(errors[0]?.subtype).toBe("error_max_turns");
+    expect(errors[0]?.detail).toContain("maximum number of turns");
+  });
 });
 
 describe("AppConfigRepo", () => {

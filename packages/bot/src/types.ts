@@ -81,6 +81,19 @@ export interface DailyStatDto {
   costUsd: number;
 }
 
+export interface RecentErrorDto {
+  runId: string | null;
+  startedAt: string;
+  guildId: string;
+  guildName: string | null;
+  /** Classified category, e.g. "max_turns", "rate_limit", "unknown". */
+  kind: string | null;
+  /** SDK terminal subtype, e.g. "error_max_turns". */
+  subtype: string | null;
+  /** Truncated raw failure text for investigation. */
+  detail: string | null;
+}
+
 export interface StatsDto {
   windowDays: number;
   totalRuns: number;
@@ -92,6 +105,7 @@ export interface StatsDto {
   topGuilds: { guildId: string; guildName: string | null; runs: number }[];
   topUsers: { userId: string; runs: number }[];
   lastRateLimitAt: string | null;
+  recentErrors: RecentErrorDto[];
 }
 
 export interface GithubIdentityDto {

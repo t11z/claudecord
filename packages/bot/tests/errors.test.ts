@@ -15,6 +15,12 @@ const FIXTURES = {
   lowCredits: "Your credit balance is too low to access the Anthropic API.",
   aborted: "Request was aborted.",
   gibberish: "Segmentation fault (core dumped)",
+  // Composed by the runner from an SDK error result (subtype — errors[] — terminal_reason).
+  maxTurns: "error_max_turns — Reached the maximum number of turns (40) — max_turns",
+  budget: "error_max_budget_usd — Spending cap of $5.00 reached",
+  executionError: "error_during_execution — tool execution failed",
+  crashed: "no_result — stream ended without a result message (possible subprocess crash / OOM)",
+  network: "API Error: request to https://api.anthropic.com failed, reason: ECONNRESET",
 } as const;
 
 describe("classifyFailure", () => {
@@ -36,6 +42,31 @@ describe("classifyFailure", () => {
 
   it("classifies aborts", () => {
     expect(classifyFailure(FIXTURES.aborted).kind).toBe("aborted");
+  });
+
+  it("classifies SDK terminal error subtypes", () => {
+    expect(classifyFailure(FIXTURES.maxTurns).kind).toBe("max_turns");
+    expect(classifyFailure(FIXTURES.budget).kind).toBe("budget");
+    expect(classifyFailure(FIXTURES.executionError).kind).toBe("execution_error");
+    expect(classifyFailure(FIXTURES.crashed).kind).toBe("crashed");
+    expect(classifyFailure(FIXTURES.network).kind).toBe("network");
+  });
+
+  it("interpolates the turn count into max_turns messages when provided", () => {
+    const now = new Date();
+    expect(classifyFailure(FIXTURES.maxTurns, now, { numTurns: 40 }).message).toContain(
+      "(40 turns)",
+    );
+    expect(classifyFailure(FIXTURES.maxTurns, now).message).not.toContain("(");
+  });
+
+  it("does not leak raw internals into user-facing messages", () => {
+    // The composed error text (paths, stack tokens, subtypes) must never surface.
+    for (const kind of ["maxTurns", "budget", "executionError", "crashed", "network"] as const) {
+      const { message } = classifyFailure(FIXTURES[kind]);
+      expect(message).not.toContain("error_");
+      expect(message).not.toContain("ECONNRESET");
+    }
   });
 
   it("falls back to unknown with a friendly message", () => {

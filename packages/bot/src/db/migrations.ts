@@ -60,6 +60,14 @@ export const migrations: string[] = [
   `
   ALTER TABLE guild_config ADD COLUMN github_role_ids TEXT NOT NULL DEFAULT '[]';
   `,
+  // v3 — observability: a per-turn correlation id plus the raw failure reason,
+  // so an unknown/aborted run can be investigated after the fact instead of
+  // leaving only a coarse error_kind category behind.
+  `
+  ALTER TABLE usage_log ADD COLUMN run_id TEXT;
+  ALTER TABLE usage_log ADD COLUMN error_subtype TEXT;
+  ALTER TABLE usage_log ADD COLUMN error_detail TEXT;
+  `,
 ];
 
 export function runMigrations(db: Database): void {

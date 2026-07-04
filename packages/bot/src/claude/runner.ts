@@ -47,6 +47,16 @@ export interface RunResult {
   durationMs: number;
   /** Raw error text for classification when ok is false. */
   errorText: string | null;
+  /** SDK terminal subtype for a failed run, e.g. "error_max_turns". */
+  errorSubtype: string | null;
+  /** Agentic step count the SDK reported (present on max-turns failures). */
+  numTurns: number | null;
+  /**
+   * True when `text` holds a partial answer streamed before a non-fatal
+   * failure (e.g. max-turns). `ok` is still false — success metrics and
+   * session `touch` must not treat a partial as a completed turn.
+   */
+  partial: boolean;
 }
 
 export type ClaudeEngine = (req: RunRequest, sink?: ProgressSink) => Promise<RunResult>;
@@ -105,6 +115,12 @@ interface SdkMessageLike {
   };
   result?: string;
   is_error?: boolean;
+  /** Human-readable detail on the error variant of a result message. */
+  errors?: string[];
+  /** Agentic step count; present on error_max_turns results. */
+  num_turns?: number;
+  /** Structured stop reason, e.g. "max_turns", "prompt_too_long", "model_error". */
+  terminal_reason?: string;
   total_cost_usd?: number;
   usage?: { input_tokens?: number; output_tokens?: number };
 }
@@ -166,6 +182,8 @@ export function createClaudeEngine(getCredentials: () => ClaudeCredentials): Cla
     let streamedText = "";
     let ok = false;
     let errorText: string | null = null;
+    let errorSubtype: string | null = null;
+    let numTurns: number | null = null;
     let costUsd = 0;
     let inputTokens = 0;
     let outputTokens = 0;
@@ -206,7 +224,16 @@ export function createClaudeEngine(getCredentials: () => ClaudeCredentials): Cla
               ok = true;
               finalText = msg.result ?? streamedText;
             } else {
-              errorText = msg.result ?? msg.subtype ?? "unknown error";
+              // The SDK's error result carries no `result` field — the detail
+              // lives in `subtype`, `errors[]` and `terminal_reason`. Compose
+              // all three so classifyFailure has real text and the log/DB keep
+              // the reason instead of collapsing to a bare subtype.
+              errorSubtype = msg.subtype ?? null;
+              numTurns = msg.num_turns ?? null;
+              const detail = (msg.errors ?? []).filter(Boolean).join("; ");
+              errorText =
+                [msg.subtype, detail, msg.terminal_reason].filter(Boolean).join(" — ") ||
+                "unknown error";
             }
             break;
           }
@@ -215,12 +242,27 @@ export function createClaudeEngine(getCredentials: () => ClaudeCredentials): Cla
         }
       }
     } catch (err) {
-      errorText = err instanceof Error ? err.message : String(err);
+      // Keep the stack and cause for the log/DB — never shown to the user, who
+      // only ever sees classifyFailure's message.
+      if (err instanceof Error) {
+        errorText = [err.message, err.stack, err.cause ? `cause: ${String(err.cause)}` : null]
+          .filter(Boolean)
+          .join("\n");
+      } else {
+        errorText = String(err);
+      }
     }
 
     if (!ok && !errorText) {
-      errorText = "Claude produced no result message";
+      // A stream that ends without a result message usually means the CLI
+      // subprocess died (crash / OOM). Tag it so classifyFailure can say so.
+      errorText =
+        "no_result — stream ended without a result message (possible subprocess crash / OOM)";
     }
+
+    // On a non-fatal failure that still streamed text (e.g. max-turns), hand the
+    // partial answer back so the caller can show it rather than discarding work.
+    const partial = !ok && !finalText && streamedText.length > 0;
 
     return {
       ok,
@@ -231,6 +273,9 @@ export function createClaudeEngine(getCredentials: () => ClaudeCredentials): Cla
       outputTokens,
       durationMs: Date.now() - startedAt,
       errorText,
+      errorSubtype,
+      numTurns,
+      partial,
     };
   };
 }

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import {
   AttachmentBuilder,
   type Message,
@@ -102,6 +103,20 @@ export async function runConversationTurn(
   ctx.activeRuns.set(session.threadId, abort);
   const startedAt = new Date().toISOString();
 
+  // A correlation id for this single turn. Stamped on every log line and
+  // persisted with the usage row, so one Discord failure maps to exactly one
+  // grep-able record — the Claude session id is per-thread, too coarse for this.
+  const runId = randomUUID();
+  const runLog = ctx.logger.child({
+    runId,
+    threadId: session.threadId,
+    guildId: session.guildId,
+    userId: userMessage.author.id,
+    model: session.model,
+    mode: session.mode,
+  });
+  runLog.info("run.started");
+
   const guildConfig = ctx.repos.guildConfig.get(session.guildId);
   const githubToken =
     session.mode === "agentic"
@@ -146,6 +161,9 @@ export async function runConversationTurn(
     outputTokens: 0,
     durationMs: 0,
     errorText: err instanceof Error ? err.message : String(err),
+    errorSubtype: null,
+    numTurns: null,
+    partial: false,
   }));
 
   ctx.activeRuns.delete(session.threadId);
@@ -157,10 +175,17 @@ export async function runConversationTurn(
   // (or null if no answer text ever arrived — then we send fresh).
   const anchor = reply.sent;
 
+  // Classify once and reuse for the usage row, the lifecycle log, and the
+  // Discord message. numTurns sharpens the max-turns wording.
+  const classified = result.ok
+    ? null
+    : classifyFailure(result.errorText ?? "", new Date(), { numTurns: result.numTurns });
+
   ctx.repos.usage.record({
     guildId: session.guildId,
     userId: userMessage.author.id,
     threadId: session.threadId,
+    runId,
     startedAt,
     durationMs: result.durationMs,
     inputTokens: result.inputTokens,
@@ -168,19 +193,39 @@ export async function runConversationTurn(
     costUsd: result.costUsd,
     model: session.model,
     ok: result.ok,
-    errorKind: result.ok ? null : classifyFailure(result.errorText ?? "").kind,
+    errorKind: classified?.kind ?? null,
+    errorSubtype: result.errorSubtype,
+    errorDetail: result.ok ? null : (result.errorText ?? "").slice(0, 2000),
   });
 
-  if (!result.ok) {
-    const classified = classifyFailure(result.errorText ?? "");
-    if (classified.kind === "rate_limit") {
-      ctx.queue.pauseFor(RATE_LIMIT_PAUSE_MS);
-    }
-    ctx.logger.warn(
-      { threadId: session.threadId, kind: classified.kind, error: result.errorText },
-      "claude run failed",
-    );
-    const errorContent = `❌ ${classified.message}`;
+  // One structured lifecycle event per turn — success at info, failure at error
+  // so it survives LOG_LEVEL=error. The raw errorText already lives in the DB.
+  runLog[result.ok ? "info" : "error"](
+    {
+      ok: result.ok,
+      durationMs: result.durationMs,
+      inputTokens: result.inputTokens,
+      outputTokens: result.outputTokens,
+      costUsd: result.costUsd,
+      sessionId: result.sessionId,
+      kind: classified?.kind,
+      subtype: result.errorSubtype ?? undefined,
+      numTurns: result.numTurns ?? undefined,
+      partial: result.partial,
+    },
+    result.ok ? "run.finished" : "run.failed",
+  );
+
+  if (classified?.kind === "rate_limit") {
+    ctx.queue.pauseFor(RATE_LIMIT_PAUSE_MS);
+  }
+
+  // A partial answer (e.g. max-turns) still carries useful work — fall through
+  // to deliver it with a footnote rather than replacing it with the error.
+  const hasPartialAnswer = !result.ok && result.partial && result.text.trim().length > 0;
+
+  if (!result.ok && !hasPartialAnswer) {
+    const errorContent = `❌ ${classified?.message ?? ""}`;
     await (anchor
       ? anchor.edit({ content: errorContent, allowedMentions: { parse: [] } })
       : targetChannel.send({ content: errorContent, allowedMentions: { parse: [] } })
@@ -189,9 +234,13 @@ export async function runConversationTurn(
     return;
   }
 
-  ctx.repos.sessions.touch(session.threadId);
+  if (result.ok) ctx.repos.sessions.touch(session.threadId);
 
-  const notes = skipped.length > 0 ? `\n\n-# ⚠️ Skipped attachments: ${skipped.join(", ")}` : "";
+  const footnotes = [
+    skipped.length > 0 ? `⚠️ Skipped attachments: ${skipped.join(", ")}` : null,
+    hasPartialAnswer ? `⚠️ ${classified?.message}` : null,
+  ].filter(Boolean);
+  const notes = footnotes.length > 0 ? `\n\n${footnotes.map((n) => `-# ${n}`).join("\n")}` : "";
   const { chunks, asAttachment } = splitMessage(result.text + notes);
 
   try {
@@ -218,9 +267,9 @@ export async function runConversationTurn(
         await targetChannel.send({ content: chunk, allowedMentions: { parse: [] } });
       }
     }
-    await react(userMessage, "✅");
+    await react(userMessage, hasPartialAnswer ? "⚠️" : "✅");
   } catch (err) {
-    ctx.logger.warn({ err }, "failed to deliver response");
+    runLog.warn({ err }, "failed to deliver response");
     await react(userMessage, "❌");
   }
 }

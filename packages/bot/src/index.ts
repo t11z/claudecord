@@ -10,6 +10,18 @@ async function main(): Promise<void> {
   const logger = createLogger(env.LOG_LEVEL);
   const ctx = createContext(env, logger);
 
+  // Turn a silent process death into a logged one. pino's `err` serializer
+  // captures the stack and cause automatically. An uncaught exception leaves the
+  // process in an undefined state, so we log and exit; a stray rejection is
+  // logged but tolerated so one bad promise can't take the bot down.
+  process.on("uncaughtException", (err) => {
+    logger.fatal({ err }, "uncaughtException — exiting");
+    process.exit(1);
+  });
+  process.on("unhandledRejection", (reason) => {
+    logger.error({ err: reason }, "unhandledRejection");
+  });
+
   const connectDiscord = async (): Promise<string | null> => {
     if (ctx.discord?.isReady()) return null;
     const token = ctx.credentials().discordBotToken;
@@ -63,6 +75,8 @@ async function main(): Promise<void> {
 }
 
 main().catch((err) => {
-  console.error(err instanceof Error ? err.message : err);
+  // Structured startup failure (pino captures stack + cause) rather than a bare
+  // console.error that bypasses the log format and redaction.
+  createLogger("error").fatal({ err }, "fatal startup error");
   process.exit(1);
 });

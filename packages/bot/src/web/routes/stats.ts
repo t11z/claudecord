@@ -29,6 +29,10 @@ export function statsRoutes(app: Hono, ctx: AppContext): void {
         runs: u.runs,
       })),
       lastRateLimitAt: ctx.repos.usage.lastRateLimitAt(),
+      recentErrors: ctx.repos.usage.recentErrorsSince(since).map((e) => ({
+        ...e,
+        guildName: ctx.discord?.guilds.cache.get(e.guildId)?.name ?? null,
+      })),
     };
     return c.json(dto);
   });

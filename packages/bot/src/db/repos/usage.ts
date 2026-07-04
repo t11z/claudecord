@@ -1,5 +1,5 @@
 import type { Database } from "better-sqlite3";
-import type { DailyStatDto } from "../../types.js";
+import type { DailyStatDto, RecentErrorDto } from "../../types.js";
 
 export interface UsageEntry {
   guildId: string;
@@ -13,6 +13,12 @@ export interface UsageEntry {
   model: string;
   ok: boolean;
   errorKind: string | null;
+  /** Per-turn correlation id, ties this row to the run.* log lines. */
+  runId?: string | null;
+  /** SDK terminal subtype for a failed run, e.g. "error_max_turns". */
+  errorSubtype?: string | null;
+  /** Raw (truncated) failure text for post-hoc investigation. */
+  errorDetail?: string | null;
 }
 
 export interface UsageTotals {
@@ -31,8 +37,9 @@ export class UsageRepo {
       .prepare(
         `INSERT INTO usage_log
            (guild_id, user_id, thread_id, started_at, duration_ms,
-            input_tokens, output_tokens, cost_usd, model, ok, error_kind)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            input_tokens, output_tokens, cost_usd, model, ok, error_kind,
+            run_id, error_subtype, error_detail)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         entry.guildId,
@@ -46,6 +53,9 @@ export class UsageRepo {
         entry.model,
         entry.ok ? 1 : 0,
         entry.errorKind,
+        entry.runId ?? null,
+        entry.errorSubtype ?? null,
+        entry.errorDetail ?? null,
       );
   }
 
@@ -159,5 +169,37 @@ export class UsageRepo {
       )
       .get() as { started_at: string } | undefined;
     return row?.started_at ?? null;
+  }
+
+  /**
+   * The most recent failed runs, newest first, with their raw detail truncated
+   * for display. Powers the dashboard's error panel — the `guildName` is filled
+   * in by the caller from the live Discord cache.
+   */
+  recentErrorsSince(sinceIso: string, limit = 20): Omit<RecentErrorDto, "guildName">[] {
+    const rows = this.db
+      .prepare(
+        `SELECT run_id, started_at, guild_id, error_kind, error_subtype,
+                substr(error_detail, 1, 300) AS detail
+         FROM usage_log
+         WHERE ok = 0 AND started_at >= ?
+         ORDER BY started_at DESC LIMIT ?`,
+      )
+      .all(sinceIso, limit) as {
+      run_id: string | null;
+      started_at: string;
+      guild_id: string;
+      error_kind: string | null;
+      error_subtype: string | null;
+      detail: string | null;
+    }[];
+    return rows.map((r) => ({
+      runId: r.run_id,
+      startedAt: r.started_at,
+      guildId: r.guild_id,
+      kind: r.error_kind,
+      subtype: r.error_subtype,
+      detail: r.detail,
+    }));
   }
 }

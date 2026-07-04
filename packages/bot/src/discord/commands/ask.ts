@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -36,6 +37,7 @@ export const ask: Command = {
     fs.mkdirSync(cwd, { recursive: true });
 
     const startedAt = new Date().toISOString();
+    const runId = randomUUID();
     const { promise } = ctx.queue.enqueue(interaction.guildId, () =>
       ctx.engine({
         prompt,
@@ -56,12 +58,20 @@ export const ask: Command = {
       outputTokens: 0,
       durationMs: 0,
       errorText: err instanceof Error ? err.message : String(err),
+      errorSubtype: null,
+      numTurns: null,
+      partial: false,
     }));
+
+    const classified = result.ok
+      ? null
+      : classifyFailure(result.errorText ?? "", new Date(), { numTurns: result.numTurns });
 
     ctx.repos.usage.record({
       guildId: interaction.guildId,
       userId: interaction.user.id,
       threadId: null,
+      runId,
       startedAt,
       durationMs: result.durationMs,
       inputTokens: result.inputTokens,
@@ -69,12 +79,23 @@ export const ask: Command = {
       costUsd: result.costUsd,
       model: config.model ?? ctx.env.CLAUDE_MODEL,
       ok: result.ok,
-      errorKind: result.ok ? null : classifyFailure(result.errorText ?? "").kind,
+      errorKind: classified?.kind ?? null,
+      errorSubtype: result.errorSubtype,
+      errorDetail: result.ok ? null : (result.errorText ?? "").slice(0, 2000),
     });
 
     if (!result.ok) {
-      const classified = classifyFailure(result.errorText ?? "");
-      await interaction.editReply({ content: `❌ ${classified.message}` }).catch(() => {});
+      ctx.logger.error(
+        {
+          runId,
+          guildId: interaction.guildId,
+          userId: interaction.user.id,
+          kind: classified?.kind,
+          subtype: result.errorSubtype ?? undefined,
+        },
+        "ask run failed",
+      );
+      await interaction.editReply({ content: `❌ ${classified?.message ?? ""}` }).catch(() => {});
       return;
     }
 
