@@ -1,11 +1,16 @@
-import { AttachmentBuilder, type Message, type SendableChannels } from "discord.js";
+import {
+  AttachmentBuilder,
+  type Message,
+  type MessageReaction,
+  type SendableChannels,
+} from "discord.js";
 import { classifyFailure } from "../claude/errors.js";
 import type { AppContext } from "../context.js";
 import type { GuildConfig } from "../db/repos/guild-config.js";
 import type { ThreadSession } from "../db/repos/sessions.js";
 import { canUseGithub, chooseGithubToken, isGithubGateActive } from "./access-control.js";
 import { buildPrompt } from "./attachments.js";
-import { ThrottledEditor } from "./progress.js";
+import { StreamingReply, TypingIndicator } from "./progress.js";
 import { DISCORD_MESSAGE_LIMIT, splitMessage } from "./splitter.js";
 
 const RATE_LIMIT_PAUSE_MS = 60_000;
@@ -52,8 +57,9 @@ function stripBotMention(content: string, botId: string): string {
 }
 
 /**
- * Runs one conversation turn: reactions, placeholder streaming, the queued
- * Claude query, splitting/attachment of the final answer and usage logging.
+ * Runs one conversation turn: reactions, the native typing indicator, live
+ * streaming of the answer text, the queued Claude query, splitting/attachment
+ * of the final answer and usage logging.
  */
 export async function runConversationTurn(
   ctx: AppContext,
@@ -66,19 +72,11 @@ export async function runConversationTurn(
 
   await react(userMessage, "👀");
 
+  // While queued behind the concurrency semaphore, a small ⏳ hint on the user's
+  // message. The typing indicator only starts once the run actually begins.
   const position = ctx.queue.keyDepth(session.guildId);
-  const placeholderText = position > 0 ? `⏳ Queued (position ${position})…` : "⏳ Thinking…";
-
-  let placeholder: Message;
-  try {
-    placeholder = await targetChannel.send({
-      content: placeholderText,
-      allowedMentions: { parse: [] },
-    });
-  } catch (err) {
-    ctx.logger.warn({ err }, "could not send placeholder message");
-    return;
-  }
+  const queuedReaction: MessageReaction | null =
+    position > 0 ? await userMessage.react("⏳").catch(() => null) : null;
 
   const rawText = stripBotMention(userMessage.content, botId);
   const author = userMessage.member?.displayName ?? userMessage.author.username;
@@ -87,8 +85,18 @@ export async function runConversationTurn(
     userMessage.attachments,
   );
 
-  const editor = new ThrottledEditor(placeholder);
-  editor.start();
+  const typing = new TypingIndicator(targetChannel);
+  const reply = new StreamingReply(targetChannel);
+  let started = false;
+  // Fires on the first signal from the run: swap the ⏳ queue hint for the
+  // native typing indicator and begin streaming the answer.
+  const onStart = () => {
+    if (started) return;
+    started = true;
+    typing.start();
+    reply.start();
+    if (queuedReaction) void queuedReaction.users.remove(botId).catch(() => {});
+  };
 
   const abort = new AbortController();
   ctx.activeRuns.set(session.threadId, abort);
@@ -113,9 +121,18 @@ export async function runConversationTurn(
         abortController: abort,
       },
       {
-        onSessionId: (id) => ctx.repos.sessions.setClaudeSessionId(session.threadId, id),
-        onTextDelta: (delta) => editor.appendText(delta),
-        onToolUse: (tool) => editor.setActivity(`${tool}…`),
+        onSessionId: (id) => {
+          onStart();
+          ctx.repos.sessions.setClaudeSessionId(session.threadId, id);
+        },
+        onTextDelta: (delta) => {
+          onStart();
+          reply.appendText(delta);
+        },
+        onToolUse: (tool) => {
+          onStart();
+          reply.setActivity(`${tool}…`);
+        },
       },
     ),
   );
@@ -132,7 +149,13 @@ export async function runConversationTurn(
   }));
 
   ctx.activeRuns.delete(session.threadId);
-  editor.stop();
+  typing.stop();
+  reply.stop();
+  if (queuedReaction) void queuedReaction.users.remove(botId).catch(() => {});
+
+  // The streamed answer message, reused as the anchor for the final content
+  // (or null if no answer text ever arrived — then we send fresh).
+  const anchor = reply.sent;
 
   ctx.repos.usage.record({
     guildId: session.guildId,
@@ -157,9 +180,11 @@ export async function runConversationTurn(
       { threadId: session.threadId, kind: classified.kind, error: result.errorText },
       "claude run failed",
     );
-    await placeholder
-      .edit({ content: `❌ ${classified.message}`, allowedMentions: { parse: [] } })
-      .catch(() => {});
+    const errorContent = `❌ ${classified.message}`;
+    await (anchor
+      ? anchor.edit({ content: errorContent, allowedMentions: { parse: [] } })
+      : targetChannel.send({ content: errorContent, allowedMentions: { parse: [] } })
+    ).catch(() => {});
     await react(userMessage, "❌");
     return;
   }
@@ -176,15 +201,19 @@ export async function runConversationTurn(
       });
       const previewLimit = Math.max(0, DISCORD_MESSAGE_LIMIT - 120 - notes.length);
       const summary = `${result.text.slice(0, previewLimit).trimEnd()}…${notes}`;
-      await placeholder.edit({
-        content: `The full answer is attached.\n\n${summary}`.slice(0, DISCORD_MESSAGE_LIMIT),
-        files: [file],
-        allowedMentions: { parse: [] },
-      });
+      const content = `The full answer is attached.\n\n${summary}`.slice(0, DISCORD_MESSAGE_LIMIT);
+      await (anchor
+        ? anchor.edit({ content, files: [file], allowedMentions: { parse: [] } })
+        : targetChannel.send({ content, files: [file], allowedMentions: { parse: [] } }));
     } else if (chunks.length === 0) {
-      await placeholder.edit({ content: "*(empty response)*", allowedMentions: { parse: [] } });
+      const content = "*(empty response)*";
+      await (anchor
+        ? anchor.edit({ content, allowedMentions: { parse: [] } })
+        : targetChannel.send({ content, allowedMentions: { parse: [] } }));
     } else {
-      await placeholder.edit({ content: chunks[0]!, allowedMentions: { parse: [] } });
+      await (anchor
+        ? anchor.edit({ content: chunks[0]!, allowedMentions: { parse: [] } })
+        : targetChannel.send({ content: chunks[0]!, allowedMentions: { parse: [] } }));
       for (const chunk of chunks.slice(1)) {
         await targetChannel.send({ content: chunk, allowedMentions: { parse: [] } });
       }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ATTACHMENT_THRESHOLD,
+  closeOpenFences,
   DISCORD_MESSAGE_LIMIT,
   splitMessage,
 } from "../src/discord/splitter.js";
@@ -79,5 +80,34 @@ describe("splitMessage", () => {
       expect(chunk.length).toBeLessThanOrEqual(DISCORD_MESSAGE_LIMIT);
     }
     expect(chunks[1]!.startsWith("```js")).toBe(true);
+  });
+});
+
+describe("closeOpenFences", () => {
+  it("leaves balanced text unchanged", () => {
+    expect(closeOpenFences("plain text")).toBe("plain text");
+    expect(closeOpenFences("```js\nconst a = 1;\n```")).toBe("```js\nconst a = 1;\n```");
+    expect(closeOpenFences("")).toBe("");
+  });
+
+  it("closes an open ``` fence", () => {
+    expect(closeOpenFences("```js\nconst a = 1;")).toBe("```js\nconst a = 1;\n```");
+  });
+
+  it("closes an open ~~~ fence with its own marker", () => {
+    expect(closeOpenFences("~~~\nsome code")).toBe("~~~\nsome code\n~~~");
+  });
+
+  it("closes a fence opened on the last line", () => {
+    expect(closeOpenFences("intro\n```typescript")).toBe("intro\n```typescript\n```");
+  });
+
+  it("does not treat ~~~ as closing a ``` fence", () => {
+    expect(closeOpenFences("```\n~~~\nstill open")).toBe("```\n~~~\nstill open\n```");
+  });
+
+  it("matches the closing marker length rule (longer close, shorter open stays closed)", () => {
+    // ```` opened then ``` cannot close it (shorter), so still open.
+    expect(closeOpenFences("````\ncode\n```")).toBe("````\ncode\n```\n````");
   });
 });

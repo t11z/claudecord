@@ -67,7 +67,7 @@ The version is pinned exactly in `packages/bot/package.json`. To upgrade:
    interface drift in *our* code, not the SDK's behavior).
 3. Run a real smoke test with a token: start the bot, mention it, confirm
    session resume works across two messages, check `stream_event` deltas
-   still arrive (watch the placeholder grow).
+   still arrive (watch the streamed reply grow while the bot shows "typing…").
 4. Note any changed error-message wording — `claude/errors.ts` fixtures may
    need additions (add fixtures, don't loosen patterns).
 

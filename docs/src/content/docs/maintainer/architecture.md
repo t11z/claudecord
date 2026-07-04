@@ -37,9 +37,9 @@ Hono server. This keeps self-hosting to "run one container".
 | `discord/client.ts` | Intents, event wiring, disallowed-intent error translation |
 | `discord/handlers/mention.ts` | @mention → thread → session row → first turn |
 | `discord/handlers/thread-message.ts` | Follow-ups in mapped threads |
-| `discord/conversation.ts` | One turn: reactions, placeholder, queue, stream, deliver |
-| `discord/splitter.ts` | Fence-safe 2000-char splitting (pure, TDD) |
-| `discord/progress.ts` | `ThrottledEditor` — edit-based pseudo-streaming with backoff |
+| `discord/conversation.ts` | One turn: reactions, typing indicator, queue, stream, deliver |
+| `discord/splitter.ts` | Fence-safe 2000-char splitting + `closeOpenFences` (pure, TDD) |
+| `discord/progress.ts` | `TypingIndicator` (native "typing…") + `StreamingReply` — edit-based streaming with backoff |
 | `discord/attachments.ts` | Discord attachments → prompt text / image blocks |
 | `queue/queue.ts` | Per-guild serial queue + global semaphore |
 | `db/` | Migrations (PRAGMA `user_version`) + repos |
@@ -52,14 +52,17 @@ Hono server. This keeps self-hosting to "run one container".
    Otherwise, if the bot is mentioned → new conversation: create thread,
    insert session row (`mode` = chat or agentic from guild config, `cwd` =
    `DATA_DIR/workspaces/<guild>/<thread>`).
-3. `conversation.ts` reacts 👀, posts the placeholder, builds the prompt
+3. `conversation.ts` reacts 👀 (⏳ while queued), builds the prompt
    (attachments inlined / imaged), and enqueues the run keyed by guild ID.
 4. `runner.ts` calls the Agent SDK's `query()` with `resume` set to the
    stored Claude session ID (absent on turn one). The `system/init` message
-   yields the session ID, persisted immediately.
-5. `stream_event` text deltas feed the `ThrottledEditor`, which edits the
-   placeholder every ~1.5 s (widening on rate-limit backpressure).
-   `tool_use` blocks surface as a small activity line.
+   yields the session ID, persisted immediately, and starts the native
+   `TypingIndicator` ("Bot is typing…") — no placeholder message is posted
+   during the thinking/tool phase.
+5. `stream_event` text deltas feed the `StreamingReply`, which lazily creates
+   one message on the first token and edits it every ~1.5 s (widening on
+   rate-limit backpressure), keeping the live preview fence-safe.
+   `tool_use` blocks surface as a small activity line on that message.
 6. The `result` message ends the run: usage is logged, the final text is
    split fence-safely (or attached as `response.md`), reactions flip to
    ✅/❌. Rate-limit failures pause the queue for a minute.
