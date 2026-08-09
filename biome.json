@@ -29,10 +29,30 @@
         "noConsole": { "level": "warn", "options": { "allow": ["error", "warn"] } }
       },
       "style": {
-        "noNonNullAssertion": "off"
+        "noNonNullAssertion": "off",
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "paths": {
+              "@anthropic-ai/claude-agent-sdk": "All Agent SDK access goes through packages/bot/src/claude/runner.ts. The SDK moves fast; runner.ts is the only file allowed to break on upgrades."
+            }
+          }
+        }
       }
     }
   },
+  "overrides": [
+    {
+      "includes": ["packages/bot/src/claude/runner.ts", "packages/bot/tests/runner.test.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": "off"
+          }
+        }
+      }
+    }
+  ],
   "javascript": {
     "formatter": {
       "quoteStyle": "double",
