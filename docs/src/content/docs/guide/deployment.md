@@ -11,9 +11,12 @@ cd claudecord
 docker compose up -d
 ```
 
-Then finish setup in the dashboard at `http://localhost:3000`. Alternatively,
-skip the wizard by putting your tokens in a `.env` file first (see
-`.env.example`) — Compose picks it up automatically.
+Put `DISCORD_BOT_TOKEN` and `DISCORD_APPLICATION_ID` in a `.env` file first
+(see `.env.example`) — Compose picks it up automatically, and there's no
+dashboard form for the bot token (see
+[Getting started](/claudecord/guide/getting-started/) for why). Everything
+else — inviting the bot, signing into the dashboard, linking Claude/GitHub —
+happens after the bot is running.
 
 ### Volumes — do not skip this
 
@@ -31,15 +34,21 @@ never changes a thread's workspace path.
 ### Exposing the dashboard
 
 By default the dashboard is only reachable from the machine itself
-(`127.0.0.1:3000`). To reach it from elsewhere, set both:
+(`127.0.0.1:3000`). To reach it from elsewhere:
 
 ```bash
 DASHBOARD_HOST=0.0.0.0
-DASHBOARD_PASSWORD=something-long-and-random
+DASHBOARD_PUBLIC_URL=https://claudecord.example.com
 ```
 
-The bot **refuses to start** with a non-localhost host and no password.
-Put a reverse proxy with TLS in front for anything beyond your LAN.
+There's no password to set — every route requires a session, and a session
+can only come from redeeming a `/dashboard` magic link (see
+[Dashboard accounts](/claudecord/guide/dashboard-accounts/)).
+`DASHBOARD_PUBLIC_URL` matters here specifically: it's the base URL baked
+into that link, so it has to be whatever address actually reaches the
+dashboard from the browser you'll sign in with — not `localhost`, once the
+bot and the browser aren't on the same machine. Put a reverse proxy with TLS
+in front for anything beyond your LAN.
 
 ## Bare Node
 

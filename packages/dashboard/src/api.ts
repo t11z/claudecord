@@ -1,4 +1,6 @@
 import type {
+  AuthSessionDto,
+  AuthUserDto,
   ClaudeIdentitiesResponseDto,
   ClaudeIdentityDto,
   GithubIdentitiesResponseDto,
@@ -13,6 +15,8 @@ import type {
 } from "../../bot/src/types.ts";
 
 export type {
+  AuthSessionDto,
+  AuthUserDto,
   ClaudeIdentitiesResponseDto,
   ClaudeIdentityDto,
   GithubIdentitiesResponseDto,
@@ -55,9 +59,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 }
 
 export const api = {
-  authRequired: () =>
-    request<{ required: boolean; authenticated: boolean }>("GET", "/api/auth/required"),
-  login: (password: string) => request<{ ok: boolean }>("POST", "/api/auth/login", { password }),
+  session: () => request<AuthSessionDto>("GET", "/api/auth/session"),
   logout: () => request<{ ok: boolean }>("POST", "/api/auth/logout"),
   status: () => request<StatusDto>("GET", "/api/status"),
   guilds: () => request<GuildSummaryDto[]>("GET", "/api/guilds"),
@@ -70,8 +72,6 @@ export const api = {
   abortSession: (threadId: string) =>
     request<{ ok: boolean }>("POST", `/api/sessions/${threadId}/abort`),
   stats: (windowDays: number) => request<StatsDto>("GET", `/api/stats?window=${windowDays}`),
-  setupDiscordToken: (token: string, applicationId: string) =>
-    request<SetupResultDto>("POST", "/api/setup/discord-token", { token, applicationId }),
   setupGithubApp: (clientId: string, clientSecret: string) =>
     request<SetupResultDto>("POST", "/api/setup/github-app", { clientId, clientSecret }),
   githubIdentities: () => request<GithubIdentitiesResponseDto>("GET", "/api/github/identities"),

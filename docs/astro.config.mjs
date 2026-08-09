@@ -8,7 +8,7 @@ export default defineConfig({
     starlight({
       title: "claudecord",
       description:
-        "Self-hosted @claude for Discord — mention the bot, get Claude. Powered by your Claude Code OAuth token.",
+        "Self-hosted @claude for Discord — mention the bot, get Claude. Every member links their own Claude Code OAuth token.",
       customCss: ["./src/styles/theme.css"],
       social: [{ icon: "github", label: "GitHub", href: "https://github.com/t11z/claudecord" }],
       editLink: {
@@ -21,6 +21,7 @@ export default defineConfig({
             { label: "Getting started", slug: "guide/getting-started" },
             { label: "Discord app setup", slug: "guide/discord-app-setup" },
             { label: "Configuration", slug: "guide/configuration" },
+            { label: "Dashboard accounts", slug: "guide/dashboard-accounts" },
             { label: "Talking to Claude", slug: "guide/usage" },
             { label: "Access control & agentic mode", slug: "guide/access-control" },
             { label: "GitHub integration", slug: "guide/github-integration" },

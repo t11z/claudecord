@@ -130,6 +130,18 @@ export interface ClaudeIdentitiesResponseDto {
   identities: ClaudeIdentityDto[];
 }
 
+export interface AuthUserDto {
+  id: string;
+  username: string | null;
+  globalName: string | null;
+  avatarUrl: string | null;
+}
+
+export interface AuthSessionDto {
+  user: AuthUserDto | null;
+  isAdmin: boolean;
+}
+
 export interface SetupResultDto {
   ok: boolean;
   message: string;

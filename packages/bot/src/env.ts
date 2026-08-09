@@ -12,17 +12,30 @@ const envSchema = z.object({
   GITHUB_APP_CLIENT_SECRET: z.string().min(1).optional(),
   DASHBOARD_HOST: z.string().default("127.0.0.1"),
   DASHBOARD_PORT: z.coerce.number().int().min(1).max(65535).default(3000),
-  DASHBOARD_PASSWORD: z.string().min(8).optional(),
   /**
-   * Allows a non-localhost bind without a password. Only safe when the port
-   * is not actually reachable from outside — e.g. inside Docker with the
-   * container port mapped to the host's loopback interface, as the shipped
-   * docker-compose.yml does.
+   * Base URL the bot uses to build magic-sign-in links (see
+   * `/dashboard` and `web/magic-link.ts`). Must be reachable by whoever runs
+   * `/dashboard` — defaults to localhost, which is only correct for a
+   * single-machine setup; set it explicitly for anything else.
    */
-  DASHBOARD_INSECURE_BIND: z
+  DASHBOARD_PUBLIC_URL: z.string().url().optional(),
+  /**
+   * Comma-separated Discord user IDs that are always dashboard admins,
+   * regardless of what's stored in `dashboard_users`. The recommended way to
+   * grant admin on anything beyond a personal server — see
+   * `web/routes/auth.ts` for the alternative (claim-on-first-login).
+   */
+  DASHBOARD_ADMIN_IDS: z
     .string()
     .optional()
-    .transform((v) => v === "1" || v === "true"),
+    .transform((v) =>
+      v
+        ? v
+            .split(",")
+            .map((id) => id.trim())
+            .filter(Boolean)
+        : [],
+    ),
   /**
    * Baked into the image at build time from the GitHub Release tag (see the
    * Dockerfile's APP_VERSION build arg). Keeps the reported version in sync
@@ -44,10 +57,4 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
     throw new Error(`Invalid environment configuration:\n${issues}`);
   }
   return parsed.data;
-}
-
-const LOCALHOST_HOSTS = new Set(["127.0.0.1", "localhost", "::1"]);
-
-export function isLocalhost(host: string): boolean {
-  return LOCALHOST_HOSTS.has(host);
 }

@@ -16,6 +16,8 @@ function warnAboutLegacyCredentials(ctx: AppContext): void {
     "ANTHROPIC_API_KEY",
     "GITHUB_TOKEN",
     "GH_TOKEN",
+    "DASHBOARD_PASSWORD",
+    "DASHBOARD_INSECURE_BIND",
   ];
   const presentEnvVars = legacyEnvVars.filter((name) => !!process.env[name]);
   if (presentEnvVars.length > 0) {
@@ -23,12 +25,18 @@ function warnAboutLegacyCredentials(ctx: AppContext): void {
       { vars: presentEnvVars },
       "these environment variables are no longer read — claudecord now requires every user to link " +
         "their own Claude subscription (/link-claude) and, optionally, their own GitHub account " +
-        "(/link-github). Unset them or ignore this warning.",
+        "(/link-github), and dashboard login is now passwordless (run /dashboard in Discord to sign " +
+        "in). Unset them or ignore this warning.",
     );
   }
 
   const stored = ctx.secrets.get() as Record<string, unknown>;
-  const legacySecretsKeys = ["claudeOauthToken", "anthropicApiKey", "githubToken"];
+  const legacySecretsKeys = [
+    "claudeOauthToken",
+    "anthropicApiKey",
+    "githubToken",
+    "dashboardPassword",
+  ];
   const presentSecretsKeys = legacySecretsKeys.filter((key) => stored[key] !== undefined);
   if (presentSecretsKeys.length > 0) {
     ctx.logger.warn(
@@ -58,28 +66,23 @@ async function main(): Promise<void> {
     logger.error({ err: reason }, "unhandledRejection");
   });
 
-  const connectDiscord = async (): Promise<string | null> => {
-    if (ctx.discord?.isReady()) return null;
-    const token = ctx.credentials().discordBotToken;
-    if (!token) return "No Discord bot token configured.";
+  // The dashboard no longer bootstraps the bot token — it has to be in .env
+  // before the dashboard is reachable at all, since /dashboard (the only way
+  // to sign in) requires the bot to already be online. See getting-started.md.
+  startWebServer(ctx);
+
+  const token = ctx.credentials().discordBotToken;
+  if (!token) {
+    logger.warn(
+      "No DISCORD_BOT_TOKEN configured. Set it in .env and restart — there is no way to " +
+        "supply it through the dashboard.",
+    );
+  } else {
     try {
       await startDiscord(ctx, token);
-      return null;
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
       logger.error({ err }, "discord connection failed");
-      return message;
     }
-  };
-
-  startWebServer(ctx, { onDiscordTokenSaved: connectDiscord });
-
-  const discordError = await connectDiscord();
-  if (discordError) {
-    logger.warn(
-      `Discord not connected yet (${discordError}). Finish setup in the dashboard: ` +
-        `http://${env.DASHBOARD_HOST}:${env.DASHBOARD_PORT}`,
-    );
   }
 
   const shutdown = () => {

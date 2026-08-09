@@ -1,12 +1,11 @@
-import crypto from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { type ServerType, serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
 import type { AppContext } from "../context.js";
-import { isLocalhost } from "../env.js";
-import { DashboardAuth } from "./auth.js";
+import { requireAdmin } from "./middleware.js";
+import { authRoutes } from "./routes/auth.js";
 import { claudeRoutes } from "./routes/claude.js";
 import { configRoutes } from "./routes/config.js";
 import { githubRoutes } from "./routes/github.js";
@@ -15,84 +14,52 @@ import { setupRoutes } from "./routes/setup.js";
 import { statsRoutes } from "./routes/stats.js";
 import { statusRoutes } from "./routes/status.js";
 
-export interface WebServerHooks {
-  /** Called by the setup wizard after a Discord token was stored. */
-  onDiscordTokenSaved: () => Promise<string | null>;
-}
-
 /**
- * Resolves the effective dashboard password for a non-localhost bind without
- * ever starting the server unauthenticated. A crash loop here would make the
- * setup wizard itself unreachable, so a missing password is bootstrapped
- * instead of treated as a fatal config error: reuse a previously generated
- * one, or mint and persist a new one and log it exactly once.
+ * Builds the API app without binding a port — split out from
+ * `startWebServer` so tests can exercise the real route-gating wiring via
+ * `app.request()` (see tests/web-route-gating.test.ts) without a live
+ * listener. `includeStatic` is skipped in tests; the built dashboard isn't
+ * part of what route gating needs to verify.
  */
-function resolveBindPassword(
-  ctx: AppContext,
-  host: string,
-  password: string | undefined,
-): string | undefined {
-  if (isLocalhost(host) || password || ctx.env.DASHBOARD_INSECURE_BIND) return password;
-
-  const existing = ctx.secrets.get().dashboardPassword;
-  if (existing) return existing;
-
-  const generated = crypto.randomBytes(18).toString("base64url");
-  ctx.secrets.update({ dashboardPassword: generated });
-  ctx.logger.warn(
-    `DASHBOARD_HOST is set to "${host}" (not localhost) but DASHBOARD_PASSWORD is empty. ` +
-      `Generated a one-time dashboard password so the setup wizard stays reachable: ${generated} ` +
-      "Set DASHBOARD_PASSWORD to replace it with a permanent one.",
-  );
-  return generated;
-}
-
-export function startWebServer(ctx: AppContext, hooks: WebServerHooks): ServerType {
-  const { DASHBOARD_HOST: host, DASHBOARD_PORT: port } = ctx.env;
-  const password = resolveBindPassword(ctx, host, ctx.env.DASHBOARD_PASSWORD);
-
-  const auth = new DashboardAuth(ctx, password);
+export function buildApiApp(ctx: AppContext, includeStatic = true): Hono {
   const app = new Hono();
 
-  app.post("/api/auth/login", async (c) => {
-    const body = (await c.req.json().catch(() => ({}))) as { password?: string };
-    if (!auth.required) return c.json({ ok: true });
-    if (typeof body.password === "string" && auth.verifyPassword(body.password)) {
-      auth.issueCookie(c);
-      return c.json({ ok: true });
-    }
-    return c.json({ error: "wrong password" }, 401);
-  });
+  // Unauthenticated: this is the only door in. A session can only be minted
+  // by redeeming a `/dashboard` magic link — there is no password anywhere.
+  authRoutes(app, ctx);
 
-  app.post("/api/auth/logout", (c) => {
-    auth.clearCookie(c);
-    return c.json({ ok: true });
-  });
-
-  app.get("/api/auth/required", (c) =>
-    c.json({ required: auth.required, authenticated: auth.isAuthenticated(c) }),
-  );
-
-  app.use("/api/*", auth.middleware());
+  // Everything registered from here on requires an admin session. Routes
+  // registered *before* this line (just authRoutes above) are exempt, since
+  // Hono composes each path's handler chain from registrations up to that
+  // point — this mirrors how /api/auth/* was already exempted pre-rewrite.
+  app.use("/api/*", requireAdmin(ctx.auth));
 
   statusRoutes(app, ctx);
-  setupRoutes(app, ctx, hooks);
+  setupRoutes(app, ctx);
   configRoutes(app, ctx);
   githubRoutes(app, ctx);
   claudeRoutes(app, ctx);
   sessionRoutes(app, ctx);
   statsRoutes(app, ctx);
 
-  // Built dashboard (packages/dashboard → public/). In dev, Vite serves the
-  // frontend itself and proxies /api here.
-  const publicDir = path.relative(
-    process.cwd(),
-    path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "public"),
-  );
-  app.use("/*", serveStatic({ root: publicDir }));
-  app.get("*", serveStatic({ root: publicDir, path: "index.html" }));
+  if (includeStatic) {
+    // Built dashboard (packages/dashboard → public/). In dev, Vite serves the
+    // frontend itself and proxies /api here.
+    const publicDir = path.relative(
+      process.cwd(),
+      path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "public"),
+    );
+    app.use("/*", serveStatic({ root: publicDir }));
+    app.get("*", serveStatic({ root: publicDir, path: "index.html" }));
+  }
 
+  return app;
+}
+
+export function startWebServer(ctx: AppContext): ServerType {
+  const { DASHBOARD_HOST: host, DASHBOARD_PORT: port } = ctx.env;
+  const app = buildApiApp(ctx);
   const server = serve({ fetch: app.fetch, hostname: host, port });
-  ctx.logger.info({ host, port, passwordProtected: auth.required }, "dashboard listening");
+  ctx.logger.info({ host, port }, "dashboard listening");
   return server;
 }

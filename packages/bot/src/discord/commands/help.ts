@@ -31,6 +31,7 @@ export const help: Command = {
         { name: "/config", value: "Allowlists & agentic mode (admins)", inline: true },
         { name: "/link-claude", value: "Connect your own Claude subscription", inline: true },
         { name: "/link-github", value: "Use your own GitHub in agentic runs", inline: true },
+        { name: "/dashboard", value: "Get a sign-in link for the web dashboard", inline: true },
       )
       .setFooter({ text: `Self-hosted claudecord • Docs: ${DOCS_URL}` });
 

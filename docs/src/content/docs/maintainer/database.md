@@ -4,7 +4,7 @@ description: Schema, migration conventions and repo patterns.
 ---
 
 SQLite via `better-sqlite3` — synchronous, zero-config, one file in
-`DATA_DIR`. No ORM: four tables don't justify one, and hand-written SQL in
+`DATA_DIR`. No ORM: five tables don't justify one, and hand-written SQL in
 repo classes keeps everything greppable.
 
 ## Schema
@@ -35,10 +35,20 @@ Absent row = defaults (enabled, everything allowed, chat-only).
 One row per run: tokens, cost, duration, `ok`, `error_kind`. Powers `/usage`
 and the dashboard stats. Contains IDs only — no message content.
 
+### `dashboard_users`
+
+One row per Discord user who has ever signed into the dashboard: profile
+(`username`, `global_name`, `avatar_url`), `is_admin`, `github_skipped`
+(onboarding state), `first_login_at`/`last_login_at`. Populated on magic-link
+redemption (`web/routes/auth.ts`) — see
+[Dashboard accounts](/claudecord/guide/dashboard-accounts/) for how `is_admin`
+gets decided. Never holds a token; those stay in `secrets.json`.
+
 ### `app_config`
 
-Key/value for non-secret app state (e.g. the dashboard cookie-signing
-secret). **Never put tokens here.**
+Key/value for non-secret app state — the dashboard session-cookie secret and
+the magic-link signing secret (both HMAC keys, generated once via
+`getOrInit`). **Never put tokens here.**
 
 ## Migration conventions
 

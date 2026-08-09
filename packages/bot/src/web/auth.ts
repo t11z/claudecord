@@ -1,42 +1,51 @@
 import crypto from "node:crypto";
-import type { Context, Next } from "hono";
+import type { Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
-import type { AppContext } from "../context.js";
+import type { AppConfigRepo } from "../db/repos/app-config.js";
 
-const COOKIE_NAME = "claudecord_session";
-const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
+const COOKIE_NAME = "claudecord_sid";
+/**
+ * Rolling 30 days: the identity behind a session is a stable Discord user, not
+ * a password, so there's no reason to force a re-visit to `/dashboard` more
+ * than about once a month. Re-issued on every authenticated request.
+ */
+const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+export interface Session {
+  /** Discord user id. Every session has one — there is no identity-less login. */
+  sub: string;
+  isAdmin: boolean;
+}
+
+interface SessionPayload extends Session {
+  exp: number;
+}
 
 function hmac(secret: string, payload: string): string {
   return crypto.createHmac("sha256", secret).update(payload).digest("base64url");
 }
 
+/**
+ * Signs and verifies the dashboard session cookie. There is no password path
+ * anymore — the only way to mint a session is redeeming a magic link from
+ * `/dashboard` (see `magic-link.ts` and `routes/auth.ts`).
+ */
 export class DashboardAuth {
   private readonly secret: string;
 
   constructor(
-    ctx: AppContext,
-    private readonly password: string | undefined,
+    appConfig: AppConfigRepo,
+    private readonly now: () => number = Date.now,
   ) {
-    this.secret = ctx.repos.appConfig.getOrInit("dashboard_cookie_secret", () =>
+    this.secret = appConfig.getOrInit("dashboard_cookie_secret", () =>
       crypto.randomBytes(32).toString("base64url"),
     );
   }
 
-  get required(): boolean {
-    return this.password !== undefined;
-  }
-
-  verifyPassword(candidate: string): boolean {
-    if (!this.password) return false;
-    const a = Buffer.from(candidate);
-    const b = Buffer.from(this.password);
-    return a.length === b.length && crypto.timingSafeEqual(a, b);
-  }
-
-  issueCookie(c: Context): void {
-    const expires = Date.now() + SESSION_TTL_MS;
-    const payload = String(expires);
-    setCookie(c, COOKIE_NAME, `${payload}.${hmac(this.secret, payload)}`, {
+  issueCookie(c: Context, session: Session): void {
+    const payload: SessionPayload = { ...session, exp: this.now() + SESSION_TTL_MS };
+    const encoded = Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
+    setCookie(c, COOKIE_NAME, `${encoded}.${hmac(this.secret, encoded)}`, {
       httpOnly: true,
       sameSite: "Strict",
       path: "/",
@@ -48,30 +57,34 @@ export class DashboardAuth {
     deleteCookie(c, COOKIE_NAME, { path: "/" });
   }
 
-  isAuthenticated(c: Context): boolean {
-    if (!this.required) return true;
+  /** Verifies and decodes the session cookie, or null if absent/tampered/expired. */
+  getSession(c: Context): Session | null {
     const cookie = getCookie(c, COOKIE_NAME);
-    if (!cookie) return false;
+    if (!cookie) return null;
     const dot = cookie.lastIndexOf(".");
-    if (dot <= 0) return false;
-    const payload = cookie.slice(0, dot);
+    if (dot <= 0) return null;
+    const encoded = cookie.slice(0, dot);
     const signature = cookie.slice(dot + 1);
-    const expected = hmac(this.secret, payload);
+    const expected = hmac(this.secret, encoded);
     if (
       signature.length !== expected.length ||
       !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))
     ) {
-      return false;
+      return null;
     }
-    return Number.parseInt(payload, 10) > Date.now();
+
+    let payload: SessionPayload;
+    try {
+      payload = JSON.parse(Buffer.from(encoded, "base64url").toString("utf8"));
+    } catch {
+      return null;
+    }
+    if (typeof payload.exp !== "number" || payload.exp <= this.now()) return null;
+    return { sub: payload.sub, isAdmin: payload.isAdmin };
   }
 
-  middleware() {
-    return async (c: Context, next: Next) => {
-      if (!this.isAuthenticated(c)) {
-        return c.json({ error: "unauthorized" }, 401);
-      }
-      await next();
-    };
+  /** Re-issues the cookie with a fresh expiry, keeping an active session rolling. */
+  touch(c: Context, session: Session): void {
+    this.issueCookie(c, session);
   }
 }

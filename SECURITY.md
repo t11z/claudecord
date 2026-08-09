@@ -63,5 +63,22 @@ User responsibilities:
   `DATA_DIR/secrets.json` (chmod 600) — never in the database, never in logs.
 - The Discord bot token and, optionally, GitHub App credentials are the only
   instance-wide secrets, read from environment variables or the dashboard.
-- The dashboard refuses to start on a non-localhost interface unless
-  `DASHBOARD_PASSWORD` is set.
+
+## Dashboard access
+
+There is no dashboard password. Sign-in is a single-use, 5-minute link the
+bot sends you (ephemerally, visible only to you) when you run `/dashboard`
+in a server it's in — see
+[Dashboard accounts](https://t11z.github.io/claudecord/guide/dashboard-accounts/)
+for the full model, including how the first admin is decided. Practical
+consequences:
+
+- **Every route is authenticated by default** — a bare port scan or an open
+  bind exposes nothing usable, unlike the old password-optional localhost
+  default.
+- **The sign-in link is a bearer token in a URL.** Treat it like a password
+  for the ~5 minutes it's valid: don't paste it anywhere else, and it's
+  already single-use so a second open (yours or anyone else's) fails safely.
+- **`DASHBOARD_ADMIN_IDS`** is the recommended way to grant admin on
+  anything beyond a personal server, since the automatic claim-on-first-login
+  path grants admin to whoever gets there first while the admin set is empty.
