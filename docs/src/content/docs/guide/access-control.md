@@ -5,7 +5,11 @@ description: Allowlists, and what enabling file/shell tools really means.
 
 ## Allowlists
 
-Per server (dashboard → Access control, or `/config`):
+Per server, editable in Discord via `/config`, or in the dashboard —
+either as an admin (Access control page, any server) or as a plain member
+who holds **Manage Guild** on that specific server (sign in with
+`/dashboard`, no admin promotion needed; see
+[Dashboard accounts](/claudecord/guide/dashboard-accounts/)):
 
 - **Channels** — empty list = the bot answers everywhere it can read.
   Threads inherit their parent channel's status.

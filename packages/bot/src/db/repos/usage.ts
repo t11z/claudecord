@@ -111,6 +111,32 @@ export class UsageRepo {
     };
   }
 
+  userTotalsSince(userId: string, sinceIso: string): UsageTotals {
+    const row = this.db
+      .prepare(
+        `SELECT COUNT(*) AS runs,
+                SUM(CASE WHEN ok = 0 THEN 1 ELSE 0 END) AS errors,
+                COALESCE(SUM(input_tokens), 0) AS input_tokens,
+                COALESCE(SUM(output_tokens), 0) AS output_tokens,
+                COALESCE(SUM(cost_usd), 0) AS cost_usd
+         FROM usage_log WHERE user_id = ? AND started_at >= ?`,
+      )
+      .get(userId, sinceIso) as {
+      runs: number;
+      errors: number | null;
+      input_tokens: number;
+      output_tokens: number;
+      cost_usd: number;
+    };
+    return {
+      runs: row.runs,
+      errors: row.errors ?? 0,
+      inputTokens: row.input_tokens,
+      outputTokens: row.output_tokens,
+      costUsd: row.cost_usd,
+    };
+  }
+
   dailySince(sinceIso: string): DailyStatDto[] {
     const rows = this.db
       .prepare(

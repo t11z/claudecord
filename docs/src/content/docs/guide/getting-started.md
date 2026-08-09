@@ -54,7 +54,7 @@ https://discord.com/oauth2/authorize?client_id=YOUR_APPLICATION_ID&scope=bot%20a
 Prefer bare Node? See [Deployment](/claudecord/guide/deployment/) for the
 non-Docker path.
 
-## 3. Sign in to the dashboard
+## 3. Sign in and link your own Claude subscription
 
 In the server you just invited the bot to, run:
 
@@ -62,36 +62,26 @@ In the server you just invited the bot to, run:
 /dashboard
 ```
 
-The bot replies (visible only to you) with a one-time sign-in link. Open it —
-you're now signed in, and as the first person to sign in with **Manage
+The bot replies (visible only to you) with a one-time sign-in link. Open
+it — you're now signed in, and as the first person to sign in with **Manage
 Guild** on that server, you're the instance's first admin automatically (see
 [Dashboard accounts](/claudecord/guide/dashboard-accounts/) for how that
 decision is made, and for `DASHBOARD_ADMIN_IDS` if you'd rather set it
 explicitly).
 
-There's a *Claude subscriptions* card on the Setup page, but it's read-only —
-it just lists who has linked so far. Linking itself always happens in
-Discord (next step).
-
-## 4. Link your own Claude subscription
-
-In Discord, run:
-
-```
-/link-claude link
-```
-
-A modal pops up asking for a token. On any machine with
-[Claude Code](https://code.claude.com/) installed, generate one:
+Since you haven't linked a Claude subscription yet, you land straight in a
+short wizard. On any machine with [Claude Code](https://code.claude.com/)
+installed, generate a token:
 
 ```bash
 claude setup-token
 ```
 
 This walks you through a browser login and prints a long-lived token
-(`sk-ant-oat01-…`), valid for about a year. Paste it into the modal — it
-never appears in the channel — and the bot validates it with a real (tiny)
-query before storing it.
+(`sk-ant-oat01-…`), valid for about a year. Paste it into the wizard — the
+bot validates it with a real (tiny) query before storing it. GitHub linking
+is the next step and skippable; skip it for now unless you're setting up
+agentic mode.
 
 :::note
 The OAuth token only works through Claude Code itself, which is exactly how
@@ -100,9 +90,14 @@ work with the plain Anthropic REST API — that's not a bug, it's how
 subscription auth works.
 :::
 
-Every other member who wants the bot to answer them runs the same
-`/link-claude link` with their own token. Nobody else's subscription is ever
-touched.
+## 4. Everyone else links their own subscription
+
+Every other member who wants the bot to answer them does the same thing —
+`/dashboard` in Discord, then the wizard — or, without ever opening a
+browser, runs `/link-claude link` directly and pastes the token into the
+modal that pops up. Either path validates the same way and stores to the
+same place; nobody else's subscription is ever touched by someone else
+linking theirs.
 
 ## 5. Say hello
 

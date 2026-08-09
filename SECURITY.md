@@ -82,3 +82,11 @@ consequences:
 - **`DASHBOARD_ADMIN_IDS`** is the recommended way to grant admin on
   anything beyond a personal server, since the automatic claim-on-first-login
   path grants admin to whoever gets there first while the admin set is empty.
+- **Every self-service route (`/api/me/*`) is scoped to the caller's own
+  Discord id from their session** — never a path or body parameter — so
+  there is no user id for one member to substitute for another's.
+- **Per-server config is scoped to that server**, not instance-wide: a
+  member with Manage Guild on one server can edit only that server's
+  allowlists/agentic-mode setting, the same authority `/config` already
+  grants them in Discord — it does not make them a dashboard admin or give
+  them access to any other server's config or to instance-wide pages.

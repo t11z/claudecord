@@ -29,21 +29,48 @@ for 30 days and renewed on every request while you're active.
 Every signed-in account is one of:
 
 - **Admin** — everything the dashboard can show: instance status, every
-  linked identity, session management, usage stats, per-server config.
-- **Member** — your own account only (still being built — see the note
-  below).
+  linked identity, session management, usage stats, and every server's
+  config.
+- **Member** — a self-service view of just your own account: link or unlink
+  your Claude subscription and GitHub account from the browser, see your
+  own usage.
 
-There's no in-between and no per-page permission matrix: the pages that
-existed before per-user accounts (Overview, Setup, Access control, Sessions,
-Usage) all manage the whole instance or list every user's data, so all of
-them require admin.
+There's no in-between and no per-page permission matrix for the
+instance-wide pages: Overview, Setup, Sessions and Usage all manage the
+whole instance or list every user's data, so all of them require admin. The
+one exception is per-server config — see *Guild-scoped access* below.
 
-:::note
-The self-service pages for members — link your own Claude/GitHub account
-from the browser, see your own usage — are landing in a follow-up. Until
-then, a member who signs in sees a placeholder; `/link-claude` and
-`/link-github` in Discord remain the way to link.
-:::
+### First sign-in: the onboarding wizard
+
+The first time you sign in, before you've linked anything, you land in a
+short wizard instead of your account page:
+
+1. **Discord** — just a confirmation; the login already did the coupling.
+   Shows which servers you share with the bot.
+2. **Claude subscription** — paste a token from `claude setup-token`.
+   Functionally the same link `/link-claude link` makes in Discord, just
+   easier to paste into from the terminal that printed it.
+3. **GitHub (skippable)** — the same OAuth Device Flow `/link-github` uses,
+   just walked through in the browser. Skipping is remembered, so you won't
+   be asked again — link later from your account page whenever you want.
+
+Once Claude is linked and GitHub is either linked or skipped, you land on
+your **account page** on every future sign-in instead: your link status,
+buttons to unlink or replace either token, and your own usage over the last
+30 days. Nothing there is admin-visible to anyone but you.
+
+Linking is symmetric with Discord either way — `/link-claude` and
+`/link-github` in Discord always work too, whether or not you've ever
+opened the dashboard.
+
+## Guild-scoped access
+
+Per-server settings (`GET`/`PUT /api/guilds/:id/config` — allowlists, the
+agentic-mode switch, model override) aren't gated on being a dashboard
+admin. They're gated on holding **Manage Guild** on that specific Discord
+server — the same authority `/config` already uses. A server owner can
+manage their own server's settings without being promoted to instance
+admin; a dashboard admin can always reach any server's settings too.
 
 ## How the first admin is decided
 
