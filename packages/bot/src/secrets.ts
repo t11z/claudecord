@@ -44,6 +44,19 @@ export interface StoredSecrets {
   claudeIdentities?: Record<string, StoredClaudeIdentity>;
 }
 
+/**
+ * Fields the old instance-wide credential model wrote to secrets.json. No
+ * longer part of {@link StoredSecrets} — a fresh install never has them — but
+ * an upgraded install's file can still carry one, and the migration wizard
+ * (web/routes/migrate.ts) needs to read and clear them without widening the
+ * current type.
+ */
+export type LegacySecretsKey =
+  | "claudeOauthToken"
+  | "anthropicApiKey"
+  | "githubToken"
+  | "dashboardPassword";
+
 export class SecretsStore {
   private readonly file: string;
   private cache: StoredSecrets;
@@ -61,15 +74,33 @@ export class SecretsStore {
     }
   }
 
-  update(patch: Partial<StoredSecrets>): void {
-    this.cache = { ...this.cache, ...patch };
+  private persist(): void {
     fs.mkdirSync(path.dirname(this.file), { recursive: true });
     fs.writeFileSync(this.file, `${JSON.stringify(this.cache, null, 2)}\n`, { mode: 0o600 });
     fs.chmodSync(this.file, 0o600);
   }
 
+  update(patch: Partial<StoredSecrets>): void {
+    this.cache = { ...this.cache, ...patch };
+    this.persist();
+  }
+
   get(): StoredSecrets {
     return this.cache;
+  }
+
+  /** The raw value of a legacy key, if the file still carries one from before the per-user model. */
+  getLegacy(key: LegacySecretsKey): string | undefined {
+    const value = (this.cache as unknown as Record<string, unknown>)[key];
+    return typeof value === "string" ? value : undefined;
+  }
+
+  /** Removes legacy keys from the file entirely, once claimed or explicitly discarded. */
+  deleteLegacyKeys(keys: LegacySecretsKey[]): void {
+    const raw = { ...(this.cache as unknown as Record<string, unknown>) };
+    for (const key of keys) delete raw[key];
+    this.cache = raw as StoredSecrets;
+    this.persist();
   }
 }
 

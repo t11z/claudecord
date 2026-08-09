@@ -189,6 +189,22 @@ export interface SetupResultDto {
   message: string;
 }
 
+export interface MigrationLegacyKeysDto {
+  claudeOauthToken: boolean;
+  anthropicApiKey: boolean;
+  githubToken: boolean;
+  dashboardPassword: boolean;
+}
+
+export interface MigrationStatusDto {
+  /** Whether the wizard should be shown at all — false once completed or on a fresh install. */
+  needed: boolean;
+  /** Which legacy secrets.json keys are still present and awaiting a decision. */
+  legacy: MigrationLegacyKeysDto;
+  /** Discord user ids with a linked Claude/GitHub identity but no dashboard profile yet. */
+  unresolvedProfiles: string[];
+}
+
 export interface ApiErrorDto {
   error: string;
 }

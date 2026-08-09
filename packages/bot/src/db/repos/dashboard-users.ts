@@ -105,4 +105,35 @@ export class DashboardUsersRepo {
       .prepare("UPDATE dashboard_users SET github_skipped = ? WHERE discord_user_id = ?")
       .run(skipped ? 1 : 0, discordUserId);
   }
+
+  /**
+   * Fills in a profile for a user known only through a linked Claude/GitHub
+   * identity, who has never actually signed in to the dashboard — so unlike
+   * `upsertLogin`, this never touches an existing row (there's no real login
+   * to record) and never grants admin. Used by the migration wizard's
+   * profile-backfill step; see `web/routes/migrate.ts`.
+   */
+  backfillProfile(input: {
+    discordUserId: string;
+    username: string;
+    globalName: string | null;
+    avatarUrl: string | null;
+    now: string;
+  }): void {
+    this.db
+      .prepare(
+        `INSERT INTO dashboard_users
+           (discord_user_id, username, global_name, avatar_url, is_admin, first_login_at, last_login_at)
+         VALUES (?, ?, ?, ?, 0, ?, ?)
+         ON CONFLICT(discord_user_id) DO NOTHING`,
+      )
+      .run(
+        input.discordUserId,
+        input.username,
+        input.globalName,
+        input.avatarUrl,
+        input.now,
+        input.now,
+      );
+  }
 }
