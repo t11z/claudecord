@@ -68,6 +68,21 @@ export const migrations: string[] = [
   ALTER TABLE usage_log ADD COLUMN error_subtype TEXT;
   ALTER TABLE usage_log ADD COLUMN error_detail TEXT;
   `,
+  // v4 — dashboard accounts. Profiles and roles, never tokens (those stay in
+  // secrets.json per the CLAUDE.md storage rule). Populated on magic-link
+  // redemption; see web/routes/auth.ts.
+  `
+  CREATE TABLE dashboard_users (
+    discord_user_id TEXT PRIMARY KEY,
+    username TEXT,
+    global_name TEXT,
+    avatar_url TEXT,
+    is_admin INTEGER NOT NULL DEFAULT 0,
+    github_skipped INTEGER NOT NULL DEFAULT 0,
+    first_login_at TEXT NOT NULL,
+    last_login_at TEXT NOT NULL
+  );
+  `,
 ];
 
 export function runMigrations(db: Database): void {

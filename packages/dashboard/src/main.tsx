@@ -1,6 +1,6 @@
 import { type JSX, render } from "preact";
 import { useEffect, useState } from "preact/hooks";
-import { api } from "./api.ts";
+import { type AuthUserDto, api } from "./api.ts";
 import { Card } from "./components.tsx";
 import { Access } from "./pages/Access.tsx";
 import { Overview } from "./pages/Overview.tsx";
@@ -27,25 +27,8 @@ function useHashRoute(): string {
   return hash;
 }
 
-function Login(props: { onSuccess: () => void }) {
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  const submit = async (e: Event) => {
-    e.preventDefault();
-    setBusy(true);
-    setError(null);
-    try {
-      await api.login(password);
-      props.onSuccess();
-    } catch {
-      setError("Wrong password.");
-    } finally {
-      setBusy(false);
-    }
-  };
-
+/** There is no password login anymore — the only door in is a `/dashboard` magic link. */
+function SignedOut() {
   return (
     <div class="login-wrap">
       <div class="login-card">
@@ -54,20 +37,38 @@ function Login(props: { onSuccess: () => void }) {
             <div class="brand-mark">C</div>
             <strong>claudecord</strong>
           </div>
-          <form onSubmit={(e) => void submit(e)}>
-            <label class="field">
-              <span>Dashboard password</span>
-              <input
-                type="password"
-                value={password}
-                onInput={(e) => setPassword((e.target as HTMLInputElement).value)}
-              />
-            </label>
-            <button type="submit" disabled={busy || password.length === 0}>
-              {busy ? "Signing in…" : "Sign in"}
-            </button>
-            {error ? <p>{error}</p> : null}
-          </form>
+          <p>
+            Run <code>/dashboard</code> in a Discord server the bot is in — it'll reply with a
+            one-time sign-in link.
+          </p>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Placeholder for a signed-in, non-admin user. The self-service pages
+ * (link your own Claude/GitHub, see your own usage) land in a follow-up —
+ * every existing page in this app manages the whole instance, so a plain
+ * user has nowhere to go yet.
+ */
+function NoAdminAccess(props: { user: AuthUserDto | null }) {
+  return (
+    <div class="login-wrap">
+      <div class="login-card">
+        <Card>
+          <p>Signed in as {props.user?.globalName ?? props.user?.username ?? "you"}.</p>
+          <p class="muted">
+            The self-service dashboard for regular members isn't built yet — ask an admin to link
+            you, or check back soon.
+          </p>
+          <button
+            type="button"
+            onClick={() => void api.logout().then(() => window.location.reload())}
+          >
+            Sign out
+          </button>
         </Card>
       </div>
     </div>
@@ -76,17 +77,24 @@ function Login(props: { onSuccess: () => void }) {
 
 function App() {
   const hash = useHashRoute();
-  const [authState, setAuthState] = useState<"loading" | "login" | "ready">("loading");
+  const [authState, setAuthState] = useState<"loading" | "signed-out" | "user" | "admin">(
+    "loading",
+  );
+  const [user, setUser] = useState<AuthUserDto | null>(null);
 
   useEffect(() => {
     api
-      .authRequired()
-      .then((r) => setAuthState(!r.required || r.authenticated ? "ready" : "login"))
-      .catch(() => setAuthState("ready"));
+      .session()
+      .then((s) => {
+        setUser(s.user);
+        setAuthState(s.user === null ? "signed-out" : s.isAdmin ? "admin" : "user");
+      })
+      .catch(() => setAuthState("signed-out"));
   }, []);
 
   if (authState === "loading") return <div class="login-wrap">Loading…</div>;
-  if (authState === "login") return <Login onSuccess={() => setAuthState("ready")} />;
+  if (authState === "signed-out") return <SignedOut />;
+  if (authState === "user") return <NoAdminAccess user={user} />;
 
   const route = ROUTES.find((r) => r.path === hash) ?? ROUTES[0]!;
   const Page = route.component;
@@ -106,6 +114,16 @@ function App() {
           </a>
         ))}
         <div style="flex:1" />
+        <span class="muted" style="padding:0 0.8rem;font-size:0.85em">
+          {user?.globalName ?? user?.username}
+        </span>
+        <button
+          type="button"
+          class="nav"
+          onClick={() => void api.logout().then(() => window.location.reload())}
+        >
+          Sign out
+        </button>
         <a class="nav" href="https://t11z.github.io/claudecord/" target="_blank" rel="noreferrer">
           Docs ↗
         </a>

@@ -17,37 +17,65 @@ Claude subscription, and every run is billed to them.
    OAuth token. The subscription route is what this project is built around:
    flat-rate, no surprise bills, and no shared quota.
 
-## 1. Start the bot
+## 1. Create a Discord application and put the token in `.env`
+
+At [discord.com/developers/applications](https://discord.com/developers/applications),
+create an application, add a **Bot**, and on the Bot page enable the
+**Message Content Intent** (required for @mentions — the single most common
+setup mistake is forgetting this one). See
+[Discord app setup](/claudecord/guide/discord-app-setup/) for screenshots.
+
+There is no dashboard form for this — the dashboard itself needs the bot
+online to be reachable at all (see step 3), so the bot token has to reach
+the instance through `.env` from the start:
 
 ```bash
 git clone https://github.com/t11z/claudecord.git
 cd claudecord
+cp .env.example .env
+```
+
+Edit `.env` and set `DISCORD_BOT_TOKEN` and `DISCORD_APPLICATION_ID` from
+the Developer Portal's Bot and General Information pages.
+
+## 2. Start the bot and invite it to a server
+
+```bash
 docker compose up -d
 ```
 
-That's it for the server side. The bot starts in "setup mode" and serves its
-dashboard on [http://localhost:3000](http://localhost:3000).
+Build the invite link yourself — it only needs the application ID, no
+running dashboard required — and open it in a browser:
+
+```
+https://discord.com/oauth2/authorize?client_id=YOUR_APPLICATION_ID&scope=bot%20applications.commands&permissions=397552861248
+```
 
 Prefer bare Node? See [Deployment](/claudecord/guide/deployment/) for the
 non-Docker path.
 
-## 2. Run the setup wizard
+## 3. Sign in to the dashboard
 
-Open [http://localhost:3000](http://localhost:3000) and follow the steps:
+In the server you just invited the bot to, run:
 
-1. **Discord bot** — paste your bot token and application ID. Don't have one
-   yet? The wizard links you through it, or read
-   [Discord app setup](/claudecord/guide/discord-app-setup/) — the one
-   thing you must not miss is enabling the **Message Content Intent**.
-2. **Invite** — the wizard generates an invite link with exactly the
-   permissions the bot needs.
+```
+/dashboard
+```
 
-There's a *Claude subscriptions* card too, but it's read-only — it just lists
-who has linked so far. Linking itself always happens in Discord (next step).
+The bot replies (visible only to you) with a one-time sign-in link. Open it —
+you're now signed in, and as the first person to sign in with **Manage
+Guild** on that server, you're the instance's first admin automatically (see
+[Dashboard accounts](/claudecord/guide/dashboard-accounts/) for how that
+decision is made, and for `DASHBOARD_ADMIN_IDS` if you'd rather set it
+explicitly).
 
-## 3. Link your own Claude subscription
+There's a *Claude subscriptions* card on the Setup page, but it's read-only —
+it just lists who has linked so far. Linking itself always happens in
+Discord (next step).
 
-Invite the bot to a server, then in Discord run:
+## 4. Link your own Claude subscription
+
+In Discord, run:
 
 ```
 /link-claude link
@@ -76,7 +104,7 @@ Every other member who wants the bot to answer them runs the same
 `/link-claude link` with their own token. Nobody else's subscription is ever
 touched.
 
-## 4. Say hello
+## 5. Say hello
 
 In any text channel the bot can see:
 
@@ -90,5 +118,6 @@ yet.
 ## Next steps
 
 - [Configuration](/claudecord/guide/configuration/) — env vars, models, limits
+- [Dashboard accounts](/claudecord/guide/dashboard-accounts/) — magic-link login, admin vs. member
 - [Access control](/claudecord/guide/access-control/) — who may talk to the bot, and the agentic mode switch
 - [Troubleshooting](/claudecord/guide/troubleshooting/) — when something doesn't work

@@ -116,15 +116,21 @@ code {
   font-size: 1.05rem;
 }
 
-.sidebar a.nav {
+.sidebar .nav {
   padding: 0.45rem 0.65rem;
   border-radius: 8px;
   color: var(--text);
   text-decoration: none;
   font-size: 0.95rem;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
 }
 
-.sidebar a.nav:hover {
+.sidebar .nav:hover {
   background: color-mix(in srgb, var(--interactive) 10%, transparent);
 }
 

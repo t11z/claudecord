@@ -53,12 +53,24 @@ restrict access more tightly.
 The `~/.claude` volume is missing, so Claude Code's session files died with
 the container. See [Deployment](/claudecord/guide/deployment/#volumes--do-not-skip-this).
 
-## The dashboard shows "unauthorized" / won't load remotely
+## The dashboard shows "unauthorized" / never signs me in
 
-- Remote access requires `DASHBOARD_HOST=0.0.0.0` **and**
-  `DASHBOARD_PASSWORD` set. Without the password the bot refuses to bind to
-  a public interface at all.
-- Cookies are `SameSite=Strict`; log in on the same origin you're browsing.
+There's no password — see
+[Dashboard accounts](/claudecord/guide/dashboard-accounts/). Checklist:
+
+- You need to run `/dashboard` in Discord and open the link it replies with;
+  there's no way to sign in from the browser alone.
+- The link is single-use and expires in 5 minutes — if you opened it once
+  already (or waited too long), run `/dashboard` again for a fresh one.
+- If the dashboard is on a different machine than your browser, the operator
+  needs `DASHBOARD_PUBLIC_URL` set to the address you actually browse to —
+  otherwise the link points at `localhost` from the bot's perspective and
+  will never resolve for you.
+- Cookies are `SameSite=Strict`; make sure you're opening the link's own
+  origin, not a proxy/redirect that changes it.
+- 403 instead of the page you expected? You're signed in but not an admin —
+  see [Dashboard accounts](/claudecord/guide/dashboard-accounts/) for how
+  admin is granted (`DASHBOARD_ADMIN_IDS` or claim-on-first-login).
 
 ## Answers stop mid-sentence with ❌
 

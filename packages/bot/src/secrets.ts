@@ -42,8 +42,6 @@ export interface StoredSecrets {
   githubIdentities?: Record<string, StoredGithubIdentity>;
   /** Discord user id → their linked Claude Code OAuth token. */
   claudeIdentities?: Record<string, StoredClaudeIdentity>;
-  /** Auto-generated when DASHBOARD_PASSWORD is unset on a non-localhost bind. */
-  dashboardPassword?: string;
 }
 
 export class SecretsStore {

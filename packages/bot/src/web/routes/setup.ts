@@ -1,34 +1,14 @@
 import type { Hono } from "hono";
 import type { AppContext } from "../../context.js";
 import type { SetupResultDto } from "../../types.js";
-import type { WebServerHooks } from "../server.js";
 
-export function setupRoutes(app: Hono, ctx: AppContext, hooks: WebServerHooks): void {
-  /** Store the Discord bot token and try to connect immediately. */
-  app.post("/api/setup/discord-token", async (c) => {
-    const body = (await c.req.json().catch(() => ({}))) as {
-      token?: string;
-      applicationId?: string;
-    };
-    const token = body.token?.trim();
-    if (!token) return c.json<SetupResultDto>({ ok: false, message: "Token is empty." }, 400);
-
-    ctx.secrets.update({
-      discordBotToken: token,
-      ...(body.applicationId?.trim() ? { discordApplicationId: body.applicationId.trim() } : {}),
-    });
-
-    const error = await hooks.onDiscordTokenSaved();
-    if (error) {
-      return c.json<SetupResultDto>({ ok: false, message: error }, 400);
-    }
-    return c.json<SetupResultDto>({
-      ok: true,
-      message:
-        "Connected to Discord. Use the invite link on the overview page to add the bot to a server.",
-    });
-  });
-
+/**
+ * The Discord bot token has no dashboard form: reaching this page at all
+ * requires `/dashboard` to already work, which requires the bot to already
+ * be online, which requires the token to already be in `.env`. See
+ * `getting-started.md` for the bootstrap sequence.
+ */
+export function setupRoutes(app: Hono, ctx: AppContext): void {
   /**
    * Store (or clear) the GitHub App used for per-user Device Flow linking.
    * Env-provided GITHUB_APP_CLIENT_ID/_SECRET still take precedence.

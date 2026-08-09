@@ -5,10 +5,7 @@ import { Card } from "../components.tsx";
 type StepState = "pending" | "busy" | "done" | "error";
 
 export function Setup() {
-  const [discordToken, setDiscordToken] = useState("");
-  const [applicationId, setApplicationId] = useState("");
-  const [discordState, setDiscordState] = useState<StepState>("pending");
-  const [discordMessage, setDiscordMessage] = useState<string | null>(null);
+  const [discordConnected, setDiscordConnected] = useState(false);
 
   const [appClientId, setAppClientId] = useState("");
   const [appClientSecret, setAppClientSecret] = useState("");
@@ -43,7 +40,7 @@ export function Setup() {
     api
       .status()
       .then((s) => {
-        if (s.discordConnected) setDiscordState("done");
+        setDiscordConnected(s.discordConnected);
         setInviteUrl(s.inviteUrl);
       })
       .catch(() => {});
@@ -99,35 +96,38 @@ export function Setup() {
     }
   };
 
-  const submitDiscord = async () => {
-    setDiscordState("busy");
-    setDiscordMessage(null);
-    try {
-      const result = await api.setupDiscordToken(discordToken, applicationId);
-      setDiscordState(result.ok ? "done" : "error");
-      setDiscordMessage(result.message);
-      setDiscordToken("");
-      if (result.ok) {
-        const status = await api.status().catch(() => null);
-        if (status) setInviteUrl(status.inviteUrl);
-      }
-    } catch (err) {
-      setDiscordState("error");
-      setDiscordMessage(err instanceof Error ? err.message : String(err));
-    }
-  };
-
   return (
     <>
       <h1>Setup</h1>
       <div class="wizard-steps">
+        <div class={`step ${discordConnected ? "done" : ""}`} />
         <div class={`step ${claudeIdentities.length > 0 ? "done" : ""}`} />
-        <div class={`step ${discordState === "done" ? "done" : ""}`} />
         <div class={`step ${appState === "done" ? "done" : ""}`} />
-        <div class={`step ${discordState === "done" ? "done" : ""}`} />
+        <div class={`step ${discordConnected ? "done" : ""}`} />
       </div>
 
-      <Card title="1 · Claude subscriptions (one per user)">
+      <Card title="1 · Discord bot">
+        <p class="muted">
+          The bot token has no dashboard form anymore — since reaching this page at all requires{" "}
+          <code>/dashboard</code> to already work, and that needs the bot online. Create an
+          application at{" "}
+          <a href="https://discord.com/developers/applications" target="_blank" rel="noreferrer">
+            discord.com/developers
+          </a>
+          , add a <strong>Bot</strong>, enable the <strong>Message Content Intent</strong> on the
+          Bot page (required for @mentions), and put the bot token and application ID in{" "}
+          <code>.env</code>:
+        </p>
+        <pre class="muted" style="padding:0.6rem;border-radius:6px;overflow-x:auto">
+          {"DISCORD_BOT_TOKEN=...\nDISCORD_APPLICATION_ID=..."}
+        </pre>
+        <p class="muted">
+          Restart the bot after editing — this page will pick it up automatically.
+        </p>
+        {discordConnected ? <p>✅ Connected.</p> : <p class="muted">Not connected yet.</p>}
+      </Card>
+
+      <Card title="2 · Claude subscriptions (one per user)">
         <p class="muted">
           claudecord has no shared, instance-wide Claude credential. Every Discord user brings their
           own Claude Code subscription: once the bot is in a server, each user runs{" "}
@@ -171,46 +171,6 @@ export function Setup() {
           Tokens are stored in <code>DATA_DIR/secrets.json</code> (chmod 600), never in the database
           or logs.
         </p>
-      </Card>
-
-      <Card title="2 · Discord bot">
-        <p class="muted">
-          Create an application at{" "}
-          <a href="https://discord.com/developers/applications" target="_blank" rel="noreferrer">
-            discord.com/developers
-          </a>
-          , add a <strong>Bot</strong>, and on the Bot page enable the{" "}
-          <strong>Message Content Intent</strong> (required for @mentions). Then paste the bot token
-          and the Application ID from the General Information page.
-        </p>
-        <label class="field">
-          <span>Bot token</span>
-          <input
-            type="password"
-            value={discordToken}
-            onInput={(e) => setDiscordToken((e.target as HTMLInputElement).value)}
-          />
-        </label>
-        <label class="field">
-          <span>Application ID</span>
-          <input
-            type="text"
-            placeholder="1234567890…"
-            value={applicationId}
-            onInput={(e) => setApplicationId((e.target as HTMLInputElement).value)}
-          />
-        </label>
-        <button
-          type="button"
-          disabled={discordState === "busy" || discordToken.trim().length === 0}
-          onClick={() => void submitDiscord()}
-        >
-          {discordState === "busy" ? "Connecting…" : "Save & connect"}
-        </button>{" "}
-        {discordState === "done" ? "✅" : null}
-        {discordMessage ? (
-          <p class={discordState === "error" ? "" : "muted"}>{discordMessage}</p>
-        ) : null}
       </Card>
 
       <Card title="3 · Per-user GitHub access (optional)">
@@ -279,7 +239,7 @@ export function Setup() {
       </Card>
 
       <Card title="4 · Invite & test">
-        {discordState === "done" && inviteUrl ? (
+        {discordConnected && inviteUrl ? (
           <>
             <p>
               🎉 The bot is connected. Invite it to a server, then mention it in a text channel:
@@ -296,7 +256,7 @@ export function Setup() {
             </p>
           </>
         ) : (
-          <p class="muted">Complete step 2 above to get your invite link.</p>
+          <p class="muted">Complete step 1 above to get your invite link.</p>
         )}
       </Card>
     </>

@@ -57,4 +57,5 @@ block. Very long answers arrive as a `response.md` attachment with a preview.
 | `/config` | Allowlists, agentic mode, on/off (admins) |
 | `/link-claude` | Connect your own Claude subscription — required before the bot will run for you |
 | `/link-github` | Connect your own GitHub account for agentic runs (optional) |
+| `/dashboard` | Get a one-time sign-in link for the web dashboard |
 | `/help` | Cheat sheet of all of the above |

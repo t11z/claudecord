@@ -55,19 +55,22 @@ Claude remembers all of it, even across bot restarts.
 Pro/Max subscription (or Anthropic Console access) to run `claude setup-token`.
 
 ```bash
-# 1. Run the bot
+# 1. Discord app → Bot page → enable Message Content Intent, then:
 git clone https://github.com/t11z/claudecord.git
 cd claudecord
+cp .env.example .env   # set DISCORD_BOT_TOKEN and DISCORD_APPLICATION_ID
 docker compose up -d
 
-# 2. Finish in the browser
-open http://localhost:3000   # setup wizard: paste the Discord bot token, invite the bot
+# 2. Invite the bot (no dashboard needed — just the application ID)
+open "https://discord.com/oauth2/authorize?client_id=YOUR_APPLICATION_ID&scope=bot%20applications.commands&permissions=397552861248"
 
-# 3. In Discord, each member links their own subscription
+# 3. In Discord: sign into the dashboard and link your subscription
+/dashboard                   # replies with a one-time sign-in link
 /link-claude link            # opens a modal — paste the output of `claude setup-token`
 ```
 
-Then mention the bot in any channel. That's it.
+Then mention the bot in any channel. That's it — there's no dashboard password anywhere;
+signing in is always a one-time link from `/dashboard`.
 
 📚 **[Full documentation →](https://t11z.github.io/claudecord/)** — setup
 guides, configuration reference, security notes and maintainer docs.
@@ -84,6 +87,7 @@ guides, configuration reference, security notes and maintainer docs.
 | `/config` | Allowlists, agentic mode, on/off *(admin)* |
 | `/link-claude` | Connect your own Claude subscription — required before the bot will run for you |
 | `/link-github` | Connect your own GitHub account for agentic runs *(optional)* |
+| `/dashboard` | Get a one-time sign-in link for the web dashboard |
 
 ## A note on security & fair use
 
