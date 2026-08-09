@@ -21,12 +21,13 @@ function stream(messages: unknown[]): AsyncIterable<unknown> {
   };
 }
 
-const engine = createClaudeEngine(() => ({ oauthToken: "test-token" }));
+const engine = createClaudeEngine();
 const baseReq = {
   prompt: "hi",
   cwd: "/tmp/thread",
   model: "claude-sonnet-5",
   mode: "chat" as const,
+  claudeToken: "test-token",
 };
 
 beforeEach(() => {
@@ -133,5 +134,54 @@ describe("runClaude result handling", () => {
     const res = await engine(baseReq);
     expect(res.ok).toBe(false);
     expect(res.errorText).toContain("no_result");
+  });
+});
+
+describe("runClaude env wiring", () => {
+  const emptyResult = stream([
+    { type: "result", subtype: "success", is_error: false, result: "ok" },
+  ]);
+
+  it("puts the request's claudeToken into CLAUDE_CODE_OAUTH_TOKEN and strips a stray API key", async () => {
+    queryMock.mockReturnValue(emptyResult);
+    const prevApiKey = process.env.ANTHROPIC_API_KEY;
+    process.env.ANTHROPIC_API_KEY = "should-be-removed";
+    try {
+      await engine({ ...baseReq, claudeToken: "user-specific-token" });
+    } finally {
+      if (prevApiKey === undefined) delete process.env.ANTHROPIC_API_KEY;
+      else process.env.ANTHROPIC_API_KEY = prevApiKey;
+    }
+
+    const options = queryMock.mock.calls.at(-1)?.[0]?.options as { env: Record<string, string> };
+    expect(options.env.CLAUDE_CODE_OAUTH_TOKEN).toBe("user-specific-token");
+    expect(options.env.ANTHROPIC_API_KEY).toBeUndefined();
+  });
+
+  it("omits GitHub env vars in chat mode even when a githubToken is supplied", async () => {
+    queryMock.mockReturnValue(emptyResult);
+    await engine({ ...baseReq, mode: "chat", githubToken: "gho_x" });
+
+    const options = queryMock.mock.calls.at(-1)?.[0]?.options as { env: Record<string, string> };
+    expect(options.env.GH_TOKEN).toBeUndefined();
+    expect(options.env.GITHUB_TOKEN).toBeUndefined();
+  });
+
+  it("wires GitHub env vars only in agentic mode with a githubToken", async () => {
+    queryMock.mockReturnValue(emptyResult);
+    await engine({ ...baseReq, mode: "agentic", githubToken: "gho_x" });
+
+    const options = queryMock.mock.calls.at(-1)?.[0]?.options as { env: Record<string, string> };
+    expect(options.env.GH_TOKEN).toBe("gho_x");
+    expect(options.env.GITHUB_TOKEN).toBe("gho_x");
+  });
+
+  it("omits GitHub env vars in agentic mode with no githubToken", async () => {
+    queryMock.mockReturnValue(emptyResult);
+    await engine({ ...baseReq, mode: "agentic" });
+
+    const options = queryMock.mock.calls.at(-1)?.[0]?.options as { env: Record<string, string> };
+    expect(options.env.GH_TOKEN).toBeUndefined();
+    expect(options.env.GITHUB_TOKEN).toBeUndefined();
   });
 });

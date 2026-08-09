@@ -1,4 +1,6 @@
 import type {
+  ClaudeIdentitiesResponseDto,
+  ClaudeIdentityDto,
   GithubIdentitiesResponseDto,
   GithubIdentityDto,
   GuildConfigDto,
@@ -11,6 +13,8 @@ import type {
 } from "../../bot/src/types.ts";
 
 export type {
+  ClaudeIdentitiesResponseDto,
+  ClaudeIdentityDto,
   GithubIdentitiesResponseDto,
   GithubIdentityDto,
   GuildConfigDto,
@@ -66,16 +70,16 @@ export const api = {
   abortSession: (threadId: string) =>
     request<{ ok: boolean }>("POST", `/api/sessions/${threadId}/abort`),
   stats: (windowDays: number) => request<StatsDto>("GET", `/api/stats?window=${windowDays}`),
-  setupClaudeToken: (token: string) =>
-    request<SetupResultDto>("POST", "/api/setup/claude-token", { token }),
-  checkAuth: () => request<SetupResultDto>("POST", "/api/setup/check-auth"),
   setupDiscordToken: (token: string, applicationId: string) =>
     request<SetupResultDto>("POST", "/api/setup/discord-token", { token, applicationId }),
-  setupGithubToken: (token: string) =>
-    request<SetupResultDto>("POST", "/api/setup/github-token", { token }),
   setupGithubApp: (clientId: string, clientSecret: string) =>
     request<SetupResultDto>("POST", "/api/setup/github-app", { clientId, clientSecret }),
   githubIdentities: () => request<GithubIdentitiesResponseDto>("GET", "/api/github/identities"),
   unlinkGithubIdentity: (discordUserId: string) =>
     request<{ ok: boolean }>("DELETE", `/api/github/identities/${discordUserId}`),
+  claudeIdentities: () => request<ClaudeIdentitiesResponseDto>("GET", "/api/claude/identities"),
+  unlinkClaudeIdentity: (discordUserId: string) =>
+    request<{ ok: boolean }>("DELETE", `/api/claude/identities/${discordUserId}`),
+  checkClaudeIdentity: (discordUserId: string) =>
+    request<SetupResultDto>("POST", `/api/claude/identities/${discordUserId}/check`),
 };

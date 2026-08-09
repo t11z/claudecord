@@ -14,11 +14,13 @@ sync).
 
 1. `npm run lint && npm run typecheck && npm test && npm run build` — green.
 2. **Real-token smoke test** (the one thing CI can't do):
-   - start the bot with a `CLAUDE_CODE_OAUTH_TOKEN`,
+   - start the bot (no Claude env var needed — there is no instance-wide one),
+   - `/link-claude link` with a real `claude setup-token` token → verified and stored,
    - mention it → thread is created, answer streams in,
    - reply in the thread → context is remembered (resume works),
    - `/reset`, `/usage`, `/help` respond,
-   - dashboard loads, sessions table shows the thread.
+   - dashboard loads, sessions table shows the thread, Claude subscriptions
+     card shows the linked user.
 3. `docker build .` succeeds and the container starts in setup mode without
    env vars.
 4. Update `CHANGELOG` section in the GitHub release notes (there is no

@@ -1,8 +1,9 @@
 # claudecord
 
-Self-hosted @claude for Discord. Auth is a Claude Code OAuth token; the plain Anthropic Messages
-API rejects that token, so driving the Claude Code CLI through the Agent SDK is the premise of
-this project, not an implementation detail.
+Self-hosted @claude for Discord. Auth is a Claude Code OAuth token, one per Discord user (no
+shared instance-wide credential); the plain Anthropic Messages API rejects that token, so driving
+the Claude Code CLI through the Agent SDK is the premise of this project, not an implementation
+detail.
 
 <!-- Audit cycle: cut back to essentials 2026-08. Re-audit by 2027-02 — delete every line below,
      run real tasks against the empty file, and restore only what demonstrably fails without it.

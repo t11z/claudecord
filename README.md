@@ -14,8 +14,8 @@
 
 <p align="center">
   <b>claudecord</b> brings the <code>@claude</code> experience you know from GitHub to your Discord server —
-  self-hosted, open source, and powered by the <b>Claude subscription you already pay for</b>
-  (via a Claude Code OAuth token) instead of a metered API key.
+  self-hosted, open source, with <b>no shared, instance-wide credential</b>. Every member links
+  their own Claude subscription and every run is billed to them, not the operator.
 </p>
 
 ---
@@ -40,30 +40,31 @@ Claude remembers all of it, even across bot restarts.
 | | |
 | --- | --- |
 | 🧵 **Threads with memory** | Every conversation maps to a persistent Claude session (`resume` under the hood) |
-| 🔑 **Subscription auth** | `claude setup-token` → done. No API key, no per-token bill. API key works as fallback |
+| 🔑 **Per-user subscription auth** | Each member runs `/link-claude` and pastes their own `claude setup-token` output. No shared token, no shared limits |
 | ⚡ **Streaming feel** | 👀 → live-growing reply → ✅. Code fences are never split across messages |
 | 📎 **Attachments** | Send text files and images; long answers come back as `response.md` |
 | 🎛️ **Admin dashboard** | Setup wizard, channel/role allowlists, live sessions, usage stats — in a Claude×Discord themed UI |
 | 🤖 **Agentic mode (opt-in)** | File & shell tools in per-thread sandboxes. Off by default, admin-gated, Docker-first |
-| 🐙 **GitHub integration (opt-in)** | Give it a token and agentic threads clone, push & open PRs via `git`/`gh`. Fine-grained tokens encouraged |
-| 🚦 **Limit-aware** | Per-server queue, friendly "resets at 3pm" messages, `/usage` command |
+| 🐙 **Per-user GitHub (opt-in)** | Members `/link-github` their own account; agentic threads clone, push & open PRs as *them*, via `git`/`gh` |
+| 🚦 **Limit-aware** | Per-user queue, friendly "resets at 3pm" messages, `/usage` command |
 | 🐳 **One-container deploy** | `docker compose up -d` and you're live |
 
 ## Quickstart
 
-**You need:** a Claude Pro/Max subscription (or an API key), Docker, and 5 minutes.
+**You need:** Docker and 5 minutes. Each member who talks to the bot will need their own Claude
+Pro/Max subscription (or Anthropic Console access) to run `claude setup-token`.
 
 ```bash
-# 1. Get a token (on any machine with Claude Code)
-claude setup-token
-
-# 2. Run the bot
+# 1. Run the bot
 git clone https://github.com/t11z/claudecord.git
 cd claudecord
 docker compose up -d
 
-# 3. Finish in the browser
-open http://localhost:3000   # setup wizard: paste tokens, invite the bot
+# 2. Finish in the browser
+open http://localhost:3000   # setup wizard: paste the Discord bot token, invite the bot
+
+# 3. In Discord, each member links their own subscription
+/link-claude link            # opens a modal — paste the output of `claude setup-token`
 ```
 
 Then mention the bot in any channel. That's it.
@@ -81,6 +82,8 @@ guides, configuration reference, security notes and maintainer docs.
 | `/usage` | Server usage & queue stats |
 | `/model` | Sonnet / Opus / Haiku for new threads *(admin)* |
 | `/config` | Allowlists, agentic mode, on/off *(admin)* |
+| `/link-claude` | Connect your own Claude subscription — required before the bot will run for you |
+| `/link-github` | Connect your own GitHub account for agentic runs *(optional)* |
 
 ## A note on security & fair use
 
@@ -88,10 +91,10 @@ guides, configuration reference, security notes and maintainer docs.
   default for a reason — read the
   [security docs](https://t11z.github.io/claudecord/guide/access-control/)
   before enabling it, and run the bot in Docker.
-- claudecord is designed for **personal servers and small communities**:
-  you self-host it with *your own* token, and everyone who talks to the bot
-  shares *your* subscription limits. It is not built to be a public bot
-  service.
+- claudecord has **no shared, instance-wide Claude credential**. Every run is
+  billed to the Discord user who started it, via their own `/link-claude`.
+  You self-host the infrastructure (the Discord bot); each member brings their
+  own subscription and their own rate limits.
 
 ## Contributing
 

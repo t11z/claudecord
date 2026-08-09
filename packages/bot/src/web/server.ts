@@ -7,6 +7,7 @@ import { Hono } from "hono";
 import type { AppContext } from "../context.js";
 import { isLocalhost } from "../env.js";
 import { DashboardAuth } from "./auth.js";
+import { claudeRoutes } from "./routes/claude.js";
 import { configRoutes } from "./routes/config.js";
 import { githubRoutes } from "./routes/github.js";
 import { sessionRoutes } from "./routes/sessions.js";
@@ -78,6 +79,7 @@ export function startWebServer(ctx: AppContext, hooks: WebServerHooks): ServerTy
   setupRoutes(app, ctx, hooks);
   configRoutes(app, ctx);
   githubRoutes(app, ctx);
+  claudeRoutes(app, ctx);
   sessionRoutes(app, ctx);
   statsRoutes(app, ctx);
 

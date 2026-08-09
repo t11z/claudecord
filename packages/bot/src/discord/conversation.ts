@@ -6,10 +6,11 @@ import {
   type SendableChannels,
 } from "discord.js";
 import { classifyFailure } from "../claude/errors.js";
+import { CLAUDE_LINK_REQUIRED } from "../claude/identity-store.js";
 import type { AppContext } from "../context.js";
 import type { GuildConfig } from "../db/repos/guild-config.js";
 import type { ThreadSession } from "../db/repos/sessions.js";
-import { canUseGithub, chooseGithubToken, isGithubGateActive } from "./access-control.js";
+import { canUseGithub } from "./access-control.js";
 import { buildPrompt } from "./attachments.js";
 import { StreamingReply, TypingIndicator } from "./progress.js";
 import { DISCORD_MESSAGE_LIMIT, splitMessage } from "./splitter.js";
@@ -17,14 +18,9 @@ import { DISCORD_MESSAGE_LIMIT, splitMessage } from "./splitter.js";
 const RATE_LIMIT_PAUSE_MS = 60_000;
 
 /**
- * Decides which GitHub token (if any) an agentic turn runs with. The acting
- * user is the message author, so runs happen in *their* GitHub namespace.
- *
- * - When a guild has a per-user GitHub role gate: only gated-in members get a
- *   token, and it is strictly their own — the shared operator token is never a
- *   fallback there (safe on multi-user servers).
- * - With no gate: prefer the author's linked token, else the shared token
- *   (backwards-compatible single-user behaviour).
+ * The GitHub token (if any) an agentic turn runs with. The acting user is the
+ * message author, so runs happen in *their* GitHub namespace — never a shared
+ * fallback, since there is no shared GitHub identity anymore.
  */
 async function resolveTurnGithubToken(
   ctx: AppContext,
@@ -32,17 +28,8 @@ async function resolveTurnGithubToken(
   message: Message,
 ): Promise<string | undefined> {
   const memberRoleIds = [...(message.member?.roles.cache.keys() ?? [])];
-  const gateActive = isGithubGateActive(config);
-  const memberAllowed = canUseGithub(config, memberRoleIds);
-  // Skip the token lookup entirely for gated-out members.
-  const perUserToken =
-    gateActive && !memberAllowed ? null : await ctx.github.getFreshToken(message.author.id);
-  return chooseGithubToken({
-    gateActive,
-    memberAllowed,
-    perUserToken,
-    sharedToken: ctx.credentials().githubToken,
-  });
+  if (!canUseGithub(config, memberRoleIds)) return undefined;
+  return (await ctx.github.getFreshToken(message.author.id)) ?? undefined;
 }
 
 async function react(message: Message, emoji: string): Promise<void> {
@@ -71,11 +58,20 @@ export async function runConversationTurn(
   const botId = ctx.discord?.user?.id;
   if (!botId) return;
 
+  const claudeToken = ctx.claude.getToken(userMessage.author.id);
+  if (!claudeToken) {
+    await userMessage
+      .reply({ content: CLAUDE_LINK_REQUIRED, allowedMentions: { parse: [] } })
+      .catch(() => {});
+    await react(userMessage, "🔑");
+    return;
+  }
+
   await react(userMessage, "👀");
 
   // While queued behind the concurrency semaphore, a small ⏳ hint on the user's
   // message. The typing indicator only starts once the run actually begins.
-  const position = ctx.queue.keyDepth(session.guildId);
+  const position = ctx.queue.keyDepth(userMessage.author.id);
   const queuedReaction: MessageReaction | null =
     position > 0 ? await userMessage.react("⏳").catch(() => null) : null;
 
@@ -123,7 +119,7 @@ export async function runConversationTurn(
       ? await resolveTurnGithubToken(ctx, guildConfig, userMessage)
       : undefined;
 
-  const { promise } = ctx.queue.enqueue(session.guildId, () =>
+  const { promise } = ctx.queue.enqueue(userMessage.author.id, () =>
     ctx.engine(
       {
         prompt,
@@ -131,6 +127,7 @@ export async function runConversationTurn(
         cwd: session.cwd,
         model: session.model,
         mode: session.mode,
+        claudeToken,
         systemPromptExtra: guildConfig.systemPromptExtra,
         githubToken,
         abortController: abort,
@@ -217,7 +214,7 @@ export async function runConversationTurn(
   );
 
   if (classified?.kind === "rate_limit") {
-    ctx.queue.pauseFor(RATE_LIMIT_PAUSE_MS);
+    ctx.queue.pauseKey(userMessage.author.id, RATE_LIMIT_PAUSE_MS);
   }
 
   // A partial answer (e.g. max-turns) still carries useful work — fall through

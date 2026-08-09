@@ -17,6 +17,8 @@ export function createLogger(level: string): Logger {
         "GITHUB_APP_CLIENT_SECRET",
         "accessToken",
         "refreshToken",
+        "oauthToken",
+        "claudeToken",
       ],
       censor: "[redacted]",
     },

@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { GuildConfig } from "../src/db/repos/guild-config.js";
-import {
-  canUseGithub,
-  chooseGithubToken,
-  isAllowed,
-  isGithubGateActive,
-} from "../src/discord/access-control.js";
+import { canUseGithub, isAllowed, isGithubGateActive } from "../src/discord/access-control.js";
 
 function config(overrides: Partial<GuildConfig> = {}): GuildConfig {
   return {
@@ -100,61 +95,5 @@ describe("GitHub role gate", () => {
     expect(canUseGithub(cfg, ["gh"])).toBe(true);
     expect(canUseGithub(cfg, ["other"])).toBe(false);
     expect(canUseGithub(cfg, [])).toBe(false);
-  });
-});
-
-describe("chooseGithubToken", () => {
-  it("uses the shared token as fallback when there is no gate", () => {
-    expect(
-      chooseGithubToken({
-        gateActive: false,
-        memberAllowed: true,
-        perUserToken: null,
-        sharedToken: "shared",
-      }),
-    ).toBe("shared");
-  });
-
-  it("prefers the user's own token over the shared one", () => {
-    expect(
-      chooseGithubToken({
-        gateActive: false,
-        memberAllowed: true,
-        perUserToken: "mine",
-        sharedToken: "shared",
-      }),
-    ).toBe("mine");
-  });
-
-  it("never falls back to the shared token when a gate is active", () => {
-    // Gated-in but not linked → no token at all (not the shared one).
-    expect(
-      chooseGithubToken({
-        gateActive: true,
-        memberAllowed: true,
-        perUserToken: null,
-        sharedToken: "shared",
-      }),
-    ).toBeUndefined();
-    // Gated-in and linked → their own token.
-    expect(
-      chooseGithubToken({
-        gateActive: true,
-        memberAllowed: true,
-        perUserToken: "mine",
-        sharedToken: "shared",
-      }),
-    ).toBe("mine");
-  });
-
-  it("gives gated-out members no token", () => {
-    expect(
-      chooseGithubToken({
-        gateActive: true,
-        memberAllowed: false,
-        perUserToken: "mine",
-        sharedToken: "shared",
-      }),
-    ).toBeUndefined();
   });
 });

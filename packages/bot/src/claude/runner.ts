@@ -7,11 +7,6 @@ import { query } from "@anthropic-ai/claude-agent-sdk";
 import type { RunMode } from "../types.js";
 import { SegmentJoiner } from "./segments.js";
 
-export interface ClaudeCredentials {
-  oauthToken?: string | undefined;
-  apiKey?: string | undefined;
-}
-
 export interface RunRequest {
   /** Plain text, or a pre-built SDK user-message stream (for image inputs). */
   prompt: string | AsyncIterable<unknown>;
@@ -21,11 +16,17 @@ export interface RunRequest {
   cwd: string;
   model: string;
   mode: RunMode;
+  /**
+   * The acting user's Claude Code OAuth token (from `claude setup-token`).
+   * Every run is billed to whoever sent the message — there is no shared,
+   * instance-wide fallback. See claude/identity-store.ts.
+   */
+  claudeToken: string;
   systemPromptExtra?: string | null | undefined;
   /**
-   * GitHub token exposed to this agentic run for `git`/`gh` (see applyGithubEnv).
-   * The caller decides whose token this is — the acting user's linked token, or
-   * the shared operator token. Ignored in chat mode. See conversation.ts.
+   * The acting user's linked GitHub token, if any, exposed to this agentic
+   * run for `git`/`gh` (see applyGithubEnv). Ignored in chat mode. See
+   * conversation.ts.
    */
   githubToken?: string | undefined;
   abortController?: AbortController | undefined;
@@ -126,22 +127,19 @@ interface SdkMessageLike {
   usage?: { input_tokens?: number; output_tokens?: number };
 }
 
-export function createClaudeEngine(getCredentials: () => ClaudeCredentials): ClaudeEngine {
+export function createClaudeEngine(): ClaudeEngine {
   return async function runClaude(req, sink): Promise<RunResult> {
     const startedAt = Date.now();
 
-    const credentials = getCredentials();
     const env: Record<string, string | undefined> = { ...process.env };
-    if (credentials.oauthToken) {
-      env.CLAUDE_CODE_OAUTH_TOKEN = credentials.oauthToken;
-      delete env.ANTHROPIC_API_KEY;
-    } else if (credentials.apiKey) {
-      env.ANTHROPIC_API_KEY = credentials.apiKey;
-    }
+    env.CLAUDE_CODE_OAUTH_TOKEN = req.claudeToken;
+    // A stray key in the parent process's env must never shadow the acting
+    // user's own token.
+    delete env.ANTHROPIC_API_KEY;
 
     // The GitHub token is only useful where Bash/git/gh exist — agentic runs.
-    // Keep it out of chat subprocesses entirely. The caller supplies whose
-    // token to use (per-user or shared) via req.githubToken.
+    // Keep it out of chat subprocesses entirely. The caller resolves it to
+    // the acting user's own linked token, if any, via req.githubToken.
     const githubEnabled = req.mode === "agentic" && !!req.githubToken;
     if (githubEnabled && req.githubToken) {
       applyGithubEnv(env, req.githubToken);

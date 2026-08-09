@@ -1,10 +1,10 @@
 ---
 title: claudecord
-description: Self-hosted @claude for Discord — mention the bot, get Claude. Powered by your Claude Code OAuth token.
+description: Self-hosted @claude for Discord — mention the bot, get Claude. Every member links their own Claude Code OAuth token.
 template: splash
 hero:
   title: "@claude for Discord"
-  tagline: Mention the bot, get Claude. Self-hosted, open source, and powered by the Claude subscription you already pay for — no API key required.
+  tagline: Mention the bot, get Claude. Self-hosted, open source, no shared credential — every member links their own Claude subscription.
   actions:
     - text: Get started
       link: /claudecord/guide/getting-started/
@@ -23,9 +23,10 @@ import { Card, CardGrid } from "@astrojs/starlight/components";
     Mention the bot in any channel — it opens a thread and remembers the whole
     conversation. Keep typing, no re-mention needed.
   </Card>
-  <Card title="Your subscription, not an API bill" icon="seti:license">
-    Authenticates with a Claude Code OAuth token from your Pro/Max plan via
-    `claude setup-token`. An Anthropic API key works as a fallback.
+  <Card title="Your own subscription, not a shared bill" icon="seti:license">
+    No instance-wide credential. Each member runs `/link-claude` and links
+    their own Claude Code OAuth token from `claude setup-token` — every run
+    is billed to them.
   </Card>
   <Card title="Live streaming feel" icon="rocket">
     👀 on receipt, a message that grows as Claude thinks, ✅ when done. Code

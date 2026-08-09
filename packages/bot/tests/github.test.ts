@@ -1,23 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { applyGithubEnv } from "../src/claude/runner.js";
 import { checkGithubToken } from "../src/github/verify.js";
-import { resolveCredentials } from "../src/secrets.js";
-
-describe("resolveCredentials — GitHub token", () => {
-  it("prefers GITHUB_TOKEN over GH_TOKEN and the stored value", () => {
-    const creds = resolveCredentials(
-      { GITHUB_TOKEN: "env-primary", GH_TOKEN: "env-alias" },
-      { githubToken: "stored" },
-    );
-    expect(creds.githubToken).toBe("env-primary");
-  });
-
-  it("falls back to GH_TOKEN, then to the stored token", () => {
-    expect(resolveCredentials({ GH_TOKEN: "env-alias" }, {}).githubToken).toBe("env-alias");
-    expect(resolveCredentials({}, { githubToken: "stored" }).githubToken).toBe("stored");
-    expect(resolveCredentials({}, {}).githubToken).toBeUndefined();
-  });
-});
 
 describe("applyGithubEnv", () => {
   it("sets gh env vars and an insteadOf git rewrite for github.com", () => {
