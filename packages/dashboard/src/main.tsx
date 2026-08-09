@@ -1,9 +1,10 @@
 import { type JSX, render } from "preact";
 import { useEffect, useState } from "preact/hooks";
-import { type AuthUserDto, api, type MeDto } from "./api.ts";
+import { type AuthUserDto, api, type MeDto, type MigrationStatusDto } from "./api.ts";
 import { Card } from "./components.tsx";
 import { Access } from "./pages/Access.tsx";
 import { Account } from "./pages/Account.tsx";
+import { Migrate } from "./pages/Migrate.tsx";
 import { Overview } from "./pages/Overview.tsx";
 import { Sessions } from "./pages/Sessions.tsx";
 import { Setup } from "./pages/Setup.tsx";
@@ -112,6 +113,30 @@ function MemberApp(props: { user: AuthUserDto | null }) {
 function AdminApp(props: { user: AuthUserDto | null; hash: string }) {
   const route = ADMIN_ROUTES.find((r) => r.path === props.hash) ?? ADMIN_ROUTES[0]!;
   const Page = route.component;
+
+  const [migration, setMigration] = useState<MigrationStatusDto | null>(null);
+  const reloadMigration = () => {
+    setMigration(null);
+    api
+      .migrationStatus()
+      .then(setMigration)
+      .catch(() =>
+        setMigration({
+          needed: false,
+          legacy: {
+            claudeOauthToken: false,
+            anthropicApiKey: false,
+            githubToken: false,
+            dashboardPassword: false,
+          },
+          unresolvedProfiles: [],
+        }),
+      );
+  };
+  useEffect(reloadMigration, []);
+
+  if (!migration) return <div class="login-wrap">Loading…</div>;
+  if (migration.needed) return <Migrate status={migration} onComplete={reloadMigration} />;
 
   return (
     <div class="layout">

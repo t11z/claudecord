@@ -26,6 +26,7 @@ export default defineConfig({
             { label: "Access control & agentic mode", slug: "guide/access-control" },
             { label: "GitHub integration", slug: "guide/github-integration" },
             { label: "Deployment", slug: "guide/deployment" },
+            { label: "Upgrading from the old auth model", slug: "guide/migration" },
             { label: "Troubleshooting", slug: "guide/troubleshooting" },
           ],
         },

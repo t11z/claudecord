@@ -103,6 +103,11 @@ export class SessionRepo {
     return rows.map(toSession);
   }
 
+  /** Whether any thread has ever been created — used to detect a non-fresh install. */
+  hasAny(): boolean {
+    return this.db.prepare("SELECT 1 FROM thread_sessions LIMIT 1").get() !== undefined;
+  }
+
   /** Sessions idle since before the cutoff — candidates for pruning. */
   listIdleSince(cutoffIso: string): ThreadSession[] {
     const rows = this.db

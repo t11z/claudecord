@@ -14,6 +14,7 @@ import { UsageRepo } from "./db/repos/usage.js";
 import type { Env } from "./env.js";
 import { GithubIdentityStore } from "./github/identity-store.js";
 import type { Logger } from "./logger.js";
+import { stampFreshInstall } from "./migration.js";
 import { RunQueue } from "./queue/queue.js";
 import { type EffectiveCredentials, resolveCredentials, SecretsStore } from "./secrets.js";
 import { DashboardAuth } from "./web/auth.js";
@@ -94,6 +95,11 @@ export function createContext(env: Env, logger: Logger): AppContext {
     startedAt: Date.now(),
     discord: null,
   };
+  // A fresh install has no state from the old auth model, so it never needs
+  // the migration wizard — stamp it immediately rather than showing an admin
+  // an empty checklist. Installs with prior state stay unstamped until the
+  // wizard runs; see web/routes/migrate.ts.
+  stampFreshInstall(ctx);
   return ctx;
 }
 

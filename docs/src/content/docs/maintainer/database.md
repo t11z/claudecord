@@ -48,7 +48,11 @@ gets decided. Never holds a token; those stay in `secrets.json`.
 
 Key/value for non-secret app state — the dashboard session-cookie secret and
 the magic-link signing secret (both HMAC keys, generated once via
-`getOrInit`). **Never put tokens here.**
+`getOrInit`), plus `migration_version`: unset means the auth-model upgrade
+wizard (`src/migration.ts`, [Upgrading from the old auth
+model](/claudecord/guide/migration/)) hasn't run yet on an install with
+prior state; a fresh install gets it stamped immediately. **Never put
+tokens here.**
 
 ## Migration conventions
 

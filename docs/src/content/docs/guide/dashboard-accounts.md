@@ -21,6 +21,11 @@ redirects to the dashboard. A second click (or someone else opening a link
 they found in your chat history) fails — the link is already spent. Don't
 share it; anyone who opens it signs in as you.
 
+Upgrading an install that predates this model? The first admin to sign in
+gets a one-time wizard for whatever the old password/shared-token setup left
+behind — see [Upgrading from the old auth
+model](/claudecord/guide/migration/).
+
 The session itself is a signed, `HttpOnly`, `SameSite=Strict` cookie, good
 for 30 days and renewed on every request while you're active.
 

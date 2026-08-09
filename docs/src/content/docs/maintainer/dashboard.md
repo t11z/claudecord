@@ -96,6 +96,12 @@ Admin-only (behind `requireAdmin()`):
 | `DELETE /api/sessions/:threadId` | reset (drops the mapping, aborts if running) |
 | `POST /api/sessions/:threadId/abort` | abort a running query |
 | `GET /api/stats?window=30` | totals, daily series, top servers/users |
+| `GET /api/migrate/status` | whether the upgrade wizard is needed, which legacy keys remain |
+| `POST /api/migrate/claude/claim`, `.../claude/discard`, `.../api-key/discard` | adopt/discard the legacy `claudeOauthToken`/`anthropicApiKey` |
+| `POST /api/migrate/github/claim`, `.../github/discard` | adopt/discard the legacy `githubToken` |
+| `POST /api/migrate/password/discard` | clear the legacy dashboard password hash |
+| `POST /api/migrate/profiles/backfill` | resolve profiles for linked users who never opened the dashboard |
+| `POST /api/migrate/complete` | stamp `migration_version`, dismissing the wizard for good |
 
 There is deliberately no bot-token setup endpoint — `DISCORD_BOT_TOKEN` only
 ever comes from `.env`, since reaching the dashboard at all requires the bot
@@ -121,9 +127,16 @@ Deliberately boring:
 session), `MemberApp` (session, not admin), or `AdminApp` (session, admin).
 `MemberApp` further branches on `GET /api/me`'s `onboardingComplete`:
 `Welcome.tsx` (the three-step wizard) while incomplete, `Account.tsx`
-(self-service link status + usage) once done. `AdminApp` is the unchanged
-five-page router (Overview/Setup/Access/Sessions/Usage) from before per-user
-accounts existed.
+(self-service link status + usage) once done. `AdminApp` first checks
+`GET /api/migrate/status`: while `needed` is true it renders `Migrate.tsx`
+(the upgrade wizard, see `guide/migration.md`) instead of the normal
+five-page router (Overview/Setup/Access/Sessions/Usage) — this only ever
+fires for an install with prior state from before per-user accounts existed.
+
+The trigger logic itself (`hasPriorState`, `stampFreshInstall`) lives in
+`src/migration.ts`, framework-free so `context.ts` can call it during
+`createContext` — a fresh install gets `migration_version` stamped
+immediately, before the web server or any route even exists.
 
 ### Dev workflow
 

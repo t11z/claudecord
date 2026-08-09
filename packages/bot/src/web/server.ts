@@ -11,6 +11,7 @@ import { configRoutes } from "./routes/config.js";
 import { githubRoutes } from "./routes/github.js";
 import { guildConfigRoutes } from "./routes/guild-config.js";
 import { meRoutes } from "./routes/me.js";
+import { migrateRoutes } from "./routes/migrate.js";
 import { sessionRoutes } from "./routes/sessions.js";
 import { setupRoutes } from "./routes/setup.js";
 import { statsRoutes } from "./routes/stats.js";
@@ -50,6 +51,7 @@ export function buildApiApp(ctx: AppContext, includeStatic = true): Hono {
   configRoutes(app, ctx);
   githubRoutes(app, ctx);
   claudeRoutes(app, ctx);
+  migrateRoutes(app, ctx);
   sessionRoutes(app, ctx);
   statsRoutes(app, ctx);
 

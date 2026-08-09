@@ -72,6 +72,17 @@ There's no password — see
   see [Dashboard accounts](/claudecord/guide/dashboard-accounts/) for how
   admin is granted (`DASHBOARD_ADMIN_IDS` or claim-on-first-login).
 
+## Startup warns that env vars or secrets.json keys "are no longer read"
+
+You're upgrading an install that used the old shared-credential model
+(`CLAUDE_CODE_OAUTH_TOKEN`, `ANTHROPIC_API_KEY`, `GITHUB_TOKEN`/`GH_TOKEN`,
+or a dashboard password). This is expected and not an error — those aren't
+read anymore, every credential is per-user now. Unset the env vars once
+you've dealt with them, and open the dashboard as an admin: a one-time
+wizard walks through adopting or discarding whatever's left in
+`secrets.json`. See [Upgrading from the old auth
+model](/claudecord/guide/migration/).
+
 ## Answers stop mid-sentence with ❌
 
 Check the logs. Common causes: the run hit `maxTurns` (very tool-heavy
