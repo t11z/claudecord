@@ -1,4 +1,5 @@
 import { ChannelType, type Message } from "discord.js";
+import { CLAUDE_LINK_REQUIRED } from "../../claude/identity-store.js";
 import type { AppContext } from "../../context.js";
 import { workspaceDir } from "../../context.js";
 import { isAllowed } from "../access-control.js";
@@ -47,6 +48,13 @@ export async function handleMention(ctx: AppContext, message: Message): Promise<
 
   const botId = ctx.discord?.user?.id;
   if (!botId) return;
+
+  if (!ctx.claude.getToken(message.author.id)) {
+    await message
+      .reply({ content: CLAUDE_LINK_REQUIRED, allowedMentions: { parse: [] } })
+      .catch(() => {});
+    return;
+  }
 
   let thread: Awaited<ReturnType<Message["startThread"]>>;
   try {

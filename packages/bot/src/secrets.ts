@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { AuthMethod } from "./types.js";
 
 /**
  * A single Discord user's linked GitHub identity. The tokens live here (in the
@@ -17,27 +16,32 @@ export interface StoredGithubIdentity {
 }
 
 /**
+ * A single Discord user's linked Claude Code OAuth token (from
+ * `claude setup-token`). No refresh flow — the SDK has none for this token
+ * type — so relinking is how a user rotates it.
+ */
+export interface StoredClaudeIdentity {
+  oauthToken: string;
+  linkedAt: string;
+  /** ISO timestamp of the last successful auth check, or null if never re-checked. */
+  lastVerifiedAt: string | null;
+}
+
+/**
  * Tokens entered through the dashboard setup wizard are stored in a
  * chmod-600 JSON file next to the database — never in SQLite, never logged.
  * Environment variables always take precedence over this file.
  */
 export interface StoredSecrets {
-  claudeOauthToken?: string;
-  anthropicApiKey?: string;
   discordBotToken?: string;
   discordApplicationId?: string;
-  /**
-   * GitHub token (classic PAT, fine-grained PAT or app token). Wired into
-   * agentic runs as GH_TOKEN/GITHUB_TOKEN so `git` and `gh` can reach the
-   * repositories the token grants access to. Used as the operator-wide default
-   * when a guild has no per-user GitHub role gate configured.
-   */
-  githubToken?: string;
   /** GitHub App used for per-user OAuth Device Flow linking. */
   githubAppClientId?: string;
   githubAppClientSecret?: string;
   /** Discord user id → their linked GitHub identity (tokens included). */
   githubIdentities?: Record<string, StoredGithubIdentity>;
+  /** Discord user id → their linked Claude Code OAuth token. */
+  claudeIdentities?: Record<string, StoredClaudeIdentity>;
   /** Auto-generated when DASHBOARD_PASSWORD is unset on a non-localhost bind. */
   dashboardPassword?: string;
 }
@@ -71,40 +75,30 @@ export class SecretsStore {
   }
 }
 
+/**
+ * What's left instance-wide once Claude and GitHub credentials are per-user:
+ * infrastructure the operator supplies, not anything a run is billed against.
+ */
 export interface EffectiveCredentials {
-  oauthToken?: string | undefined;
-  apiKey?: string | undefined;
   discordBotToken?: string | undefined;
   discordApplicationId?: string | undefined;
-  githubToken?: string | undefined;
   githubAppClientId?: string | undefined;
   githubAppClientSecret?: string | undefined;
-  authMethod: AuthMethod;
 }
 
 export function resolveCredentials(
   env: {
-    CLAUDE_CODE_OAUTH_TOKEN?: string | undefined;
-    ANTHROPIC_API_KEY?: string | undefined;
     DISCORD_BOT_TOKEN?: string | undefined;
     DISCORD_APPLICATION_ID?: string | undefined;
-    GITHUB_TOKEN?: string | undefined;
-    GH_TOKEN?: string | undefined;
     GITHUB_APP_CLIENT_ID?: string | undefined;
     GITHUB_APP_CLIENT_SECRET?: string | undefined;
   },
   stored: StoredSecrets,
 ): EffectiveCredentials {
-  const oauthToken = env.CLAUDE_CODE_OAUTH_TOKEN ?? stored.claudeOauthToken;
-  const apiKey = env.ANTHROPIC_API_KEY ?? stored.anthropicApiKey;
   return {
-    oauthToken,
-    apiKey,
     discordBotToken: env.DISCORD_BOT_TOKEN ?? stored.discordBotToken,
     discordApplicationId: env.DISCORD_APPLICATION_ID ?? stored.discordApplicationId,
-    githubToken: env.GITHUB_TOKEN ?? env.GH_TOKEN ?? stored.githubToken,
     githubAppClientId: env.GITHUB_APP_CLIENT_ID ?? stored.githubAppClientId,
     githubAppClientSecret: env.GITHUB_APP_CLIENT_SECRET ?? stored.githubAppClientSecret,
-    authMethod: oauthToken ? "oauth" : apiKey ? "api-key" : "none",
   };
 }

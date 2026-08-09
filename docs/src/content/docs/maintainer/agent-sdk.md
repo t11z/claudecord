@@ -19,8 +19,12 @@ What looks like a limitation buys a lot:
   `resume` gives every Discord thread durable memory.
 - **Tools for free** — WebSearch/WebFetch in chat mode; Read/Write/Bash in
   agentic mode, with `allowedTools` as the safety boundary.
-- **Auth parity** — `CLAUDE_CODE_OAUTH_TOKEN` and `ANTHROPIC_API_KEY` work
-  through the identical code path; the CLI resolves them.
+
+Every `RunRequest` carries a required `claudeToken`: the acting Discord
+user's own OAuth token (see `claude/identity-store.ts`). `runner.ts` sets
+`env.CLAUDE_CODE_OAUTH_TOKEN` from it per call and deletes any stray
+`ANTHROPIC_API_KEY` from the child env — there is no instance-wide credential
+that could otherwise leak in.
 
 ## How `runner.ts` shapes the call
 
@@ -37,7 +41,8 @@ query({
     maxTurns,                    // 10 chat / 40 agentic / 6 for /ask
     includePartialMessages: true,// stream_event deltas for pseudo-streaming
     abortController,             // dashboard abort + /reset
-    env,                         // process env + the effective credential
+    env,                         // process env + the acting user's own claudeToken (and, in
+                                  // agentic mode, their linked githubToken if any)
   },
 })
 ```
@@ -57,6 +62,13 @@ Two consequences maintainers must protect:
    recomputed differently — otherwise `resume` silently starts fresh.
 2. Deployments must persist `~/.claude` (Docker volume), or restarts wipe
    all conversation memory.
+
+A thread's session is per-**thread**, not per-user: several Discord users can
+speak in the same thread and keep resuming the identical Claude session. This
+is intended, not a bug — but it means each turn is billed to *whoever sent
+that message*, and a file one user has Claude write into the thread's scratch
+workspace is readable by the next person who speaks there. There is no
+per-user isolation within a single thread.
 
 ## Upgrading the SDK
 

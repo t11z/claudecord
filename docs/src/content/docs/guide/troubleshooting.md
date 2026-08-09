@@ -9,6 +9,12 @@ The **Message Content Intent** is not enabled. Developer Portal → your app →
 **Bot** → Privileged Gateway Intents → enable **Message Content Intent**,
 then restart the bot. This is the single most common setup mistake.
 
+## The bot reacts with 🔑 and doesn't answer
+
+You (or whoever sent the message) haven't linked a Claude subscription yet.
+Run `/link-claude link` — see [Getting started](/claudecord/guide/getting-started/).
+This is per-user; one member linking doesn't unlock the bot for anyone else.
+
 ## The bot ignores mentions
 
 Checklist, in order:
@@ -18,24 +24,29 @@ Checklist, in order:
 3. Can the bot *read* the channel (View Channel permission)?
 4. Was the message a *reply* to the bot rather than a mention? Only real
    @mentions trigger it outside threads.
+5. If you got a 🔑 reaction instead of silence, see the section above — you
+   need to `/link-claude` first.
 
-## "Claude authentication failed"
+## "Claude authentication failed" / `/link-claude` rejects your token
 
 The token is invalid, expired or revoked.
 
 - OAuth tokens from `claude setup-token` last about a year, but revoking
   Claude Code's access (or a password reset) invalidates them early.
-- Fix: run `claude setup-token` again and update the token in the dashboard
-  setup page (or your `.env`).
+- Fix: run `claude setup-token` again and `/link-claude link` with the fresh
+  token (or `/link-claude unlink` first, then relink).
 - There is **no automatic refresh** for headless OAuth tokens — this is a
   Claude Code platform property, not something the bot can work around.
+- The dashboard's Claude subscriptions card has a *Re-check* button per user
+  if you want to confirm a stored token still works without relinking.
 
 ## "Usage limit reached"
 
-Your subscription's usage window is exhausted (you share it with your own
-Claude Code sessions). The bot reports when the limit resets and pauses its
-queue briefly. Options: wait, switch new conversations to a lighter model
-(`/model` → Haiku), or restrict access more tightly.
+*Your own* subscription's usage window is exhausted (shared with your own
+Claude Code sessions elsewhere) — this never affects other linked users. The
+bot reports when the limit resets and pauses your queue briefly. Options:
+wait, switch new conversations to a lighter model (`/model` → Haiku), or
+restrict access more tightly.
 
 ## Conversations lose their memory after a restart (Docker)
 

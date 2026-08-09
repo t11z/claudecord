@@ -41,35 +41,31 @@ export function Overview() {
         <Stat label="Uptime" value={formatUptime(status.uptimeSeconds)} />
       </div>
 
-      <Card title="Claude authentication">
+      <Card title="Claude subscriptions">
         <p>
-          Method:{" "}
-          {status.authMethod === "oauth" ? (
-            <Badge kind="ok">Claude Code OAuth token</Badge>
-          ) : status.authMethod === "api-key" ? (
-            <Badge kind="info">Anthropic API key</Badge>
+          {status.claudeIdentityCount > 0 ? (
+            <Badge kind="ok">
+              {status.claudeIdentityCount} user{status.claudeIdentityCount === 1 ? "" : "s"} linked
+            </Badge>
           ) : (
-            <Badge kind="danger">not configured</Badge>
-          )}{" "}
-          {status.authValid === true ? (
-            <Badge kind="ok">verified</Badge>
-          ) : status.authValid === false ? (
-            <Badge kind="danger">check failed</Badge>
-          ) : (
-            <Badge kind="warn">not checked yet</Badge>
+            <Badge kind="warn">no one has linked yet</Badge>
           )}
         </p>
         <p class="muted">
+          There is no shared, instance-wide credential — every run is billed to the Discord user who
+          started it, via their own <code>/link-claude</code>.
+        </p>
+        <p class="muted">
           Default model: <code>{status.defaultModel}</code> · Bot:{" "}
-          {status.botUser ? <code>{status.botUser.tag}</code> : "not connected"} · GitHub:{" "}
-          {status.githubConfigured ? (
-            <Badge kind="ok">token configured</Badge>
+          {status.botUser ? <code>{status.botUser.tag}</code> : "not connected"} · GitHub App:{" "}
+          {status.githubAppConfigured ? (
+            <Badge kind="ok">configured</Badge>
           ) : (
             <Badge kind="info">not configured</Badge>
           )}{" "}
           · Version: <code>{status.version}</code>
         </p>
-        {status.authMethod === "none" || !status.discordConnected ? (
+        {!status.discordConnected ? (
           <p>
             <a class="button" href="#/setup">
               Finish setup →

@@ -1,14 +1,50 @@
-import { checkClaudeAuth } from "./claude/auth-check.js";
-import { createContext } from "./context.js";
+import { type AppContext, createContext } from "./context.js";
 import { startDiscord } from "./discord/client.js";
 import { loadEnv } from "./env.js";
 import { createLogger } from "./logger.js";
 import { startWebServer } from "./web/server.js";
 
+/**
+ * claudecord no longer accepts an instance-wide Claude or GitHub credential —
+ * every run is billed to the acting Discord user's own linked identity (see
+ * /link-claude and /link-github). Warn loudly if a leftover credential from
+ * the old model is still configured, since it is now silently ignored.
+ */
+function warnAboutLegacyCredentials(ctx: AppContext): void {
+  const legacyEnvVars = [
+    "CLAUDE_CODE_OAUTH_TOKEN",
+    "ANTHROPIC_API_KEY",
+    "GITHUB_TOKEN",
+    "GH_TOKEN",
+  ];
+  const presentEnvVars = legacyEnvVars.filter((name) => !!process.env[name]);
+  if (presentEnvVars.length > 0) {
+    ctx.logger.warn(
+      { vars: presentEnvVars },
+      "these environment variables are no longer read — claudecord now requires every user to link " +
+        "their own Claude subscription (/link-claude) and, optionally, their own GitHub account " +
+        "(/link-github). Unset them or ignore this warning.",
+    );
+  }
+
+  const stored = ctx.secrets.get() as Record<string, unknown>;
+  const legacySecretsKeys = ["claudeOauthToken", "anthropicApiKey", "githubToken"];
+  const presentSecretsKeys = legacySecretsKeys.filter((key) => stored[key] !== undefined);
+  if (presentSecretsKeys.length > 0) {
+    ctx.logger.warn(
+      { keys: presentSecretsKeys },
+      "secrets.json still has values from the old instance-wide credential model — they are no " +
+        "longer read. They are left in place in case you want to reuse one of them for your own " +
+        "/link-claude or /link-github.",
+    );
+  }
+}
+
 async function main(): Promise<void> {
   const env = loadEnv();
   const logger = createLogger(env.LOG_LEVEL);
   const ctx = createContext(env, logger);
+  warnAboutLegacyCredentials(ctx);
 
   // Turn a silent process death into a logged one. pino's `err` serializer
   // captures the stack and cause automatically. An uncaught exception leaves the
@@ -37,24 +73,6 @@ async function main(): Promise<void> {
   };
 
   startWebServer(ctx, { onDiscordTokenSaved: connectDiscord });
-
-  const creds = ctx.credentials();
-  if (creds.authMethod === "none") {
-    logger.warn(
-      "No Claude credential found. Open the dashboard to finish setup: " +
-        `http://${env.DASHBOARD_HOST}:${env.DASHBOARD_PORT} — or set CLAUDE_CODE_OAUTH_TOKEN ` +
-        "(create one with `claude setup-token`).",
-    );
-  } else {
-    logger.info({ method: creds.authMethod }, "checking Claude credentials…");
-    const check = await checkClaudeAuth(ctx.engine);
-    ctx.authValid = check.ok;
-    if (check.ok) {
-      logger.info(check.message);
-    } else {
-      logger.error(`Claude auth check failed: ${check.message}`);
-    }
-  }
 
   const discordError = await connectDiscord();
   if (discordError) {

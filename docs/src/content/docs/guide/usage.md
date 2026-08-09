@@ -3,6 +3,13 @@ title: Talking to Claude
 description: Mentions, threads, attachments and slash commands.
 ---
 
+## Before you start: link your subscription
+
+claudecord has no shared Claude credential — the bot will only answer you
+once you've run `/link-claude link` and pasted a token from
+`claude setup-token` into the modal that pops up. See
+[Getting started](/claudecord/guide/getting-started/) for the full walkthrough.
+
 ## Conversations
 
 **Start:** mention the bot anywhere it's allowed:
@@ -48,4 +55,6 @@ block. Very long answers arrive as a `response.md` attachment with a preview.
 | `/usage` | This server's usage over the last 30 days + queue state |
 | `/model` | Pick the model for new conversations (admins) |
 | `/config` | Allowlists, agentic mode, on/off (admins) |
+| `/link-claude` | Connect your own Claude subscription — required before the bot will run for you |
+| `/link-github` | Connect your own GitHub account for agentic runs (optional) |
 | `/help` | Cheat sheet of all of the above |

@@ -10,10 +10,14 @@ export interface AuthCheckResult {
 }
 
 /**
- * Validates Claude credentials by running a minimal one-turn query.
- * Used at startup and by the dashboard setup wizard.
+ * Validates a single user's Claude Code OAuth token by running a minimal
+ * one-turn query. Used at /link-claude link time and by the dashboard's
+ * per-identity re-check.
  */
-export async function checkClaudeAuth(engine: ClaudeEngine): Promise<AuthCheckResult> {
+export async function checkClaudeAuth(
+  engine: ClaudeEngine,
+  claudeToken: string,
+): Promise<AuthCheckResult> {
   try {
     const cwd = path.join(os.tmpdir(), "claudecord-authcheck");
     fs.mkdirSync(cwd, { recursive: true });
@@ -22,6 +26,7 @@ export async function checkClaudeAuth(engine: ClaudeEngine): Promise<AuthCheckRe
       cwd,
       model: "claude-haiku-4-5-20251001",
       mode: "chat",
+      claudeToken,
       maxTurns: 1,
     });
     if (result.ok) {

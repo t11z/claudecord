@@ -3,7 +3,6 @@
  * these type-only, so this file must stay free of runtime imports.
  */
 
-export type AuthMethod = "oauth" | "api-key" | "none";
 export type RunMode = "chat" | "agentic";
 
 export interface StatusDto {
@@ -12,10 +11,10 @@ export interface StatusDto {
   botUser: { id: string; tag: string } | null;
   guildCount: number;
   uptimeSeconds: number;
-  authMethod: AuthMethod;
-  authValid: boolean | null;
-  /** Whether a GitHub token is configured (env or secrets store). */
-  githubConfigured: boolean;
+  /** Number of Discord users with a linked Claude subscription. */
+  claudeIdentityCount: number;
+  /** Whether a GitHub App (client id + secret) is configured for /link-github. */
+  githubAppConfigured: boolean;
   defaultModel: string;
   queueDepth: number;
   activeRuns: number;
@@ -121,8 +120,14 @@ export interface GithubIdentitiesResponseDto {
   identities: GithubIdentityDto[];
 }
 
-export interface SetupTokenRequestDto {
-  token: string;
+export interface ClaudeIdentityDto {
+  discordUserId: string;
+  linkedAt: string;
+  lastVerifiedAt: string | null;
+}
+
+export interface ClaudeIdentitiesResponseDto {
+  identities: ClaudeIdentityDto[];
 }
 
 export interface SetupResultDto {

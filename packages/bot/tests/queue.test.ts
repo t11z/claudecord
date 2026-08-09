@@ -98,9 +98,9 @@ describe("RunQueue", () => {
     await expect(next.promise).resolves.toBe("ok");
   });
 
-  it("pauses dispatching while pauseFor is active", async () => {
+  it("pauses dispatching for a single key while pauseKey is active", async () => {
     const queue = new RunQueue(1);
-    queue.pauseFor(30);
+    queue.pauseKey("g1", 30);
     let ran = false;
     const { promise } = queue.enqueue("g1", async () => {
       ran = true;
@@ -109,6 +109,24 @@ describe("RunQueue", () => {
     expect(ran).toBe(false);
     await promise;
     expect(ran).toBe(true);
+  });
+
+  it("does not pause other keys when one key is paused", async () => {
+    const queue = new RunQueue(2);
+    queue.pauseKey("g1", 20);
+    let g1Ran = false;
+    let g2Ran = false;
+    const g1 = queue.enqueue("g1", async () => {
+      g1Ran = true;
+    });
+    const g2 = queue.enqueue("g2", async () => {
+      g2Ran = true;
+    });
+    await tick();
+    expect(g2Ran).toBe(true);
+    expect(g1Ran).toBe(false);
+    await Promise.all([g1.promise, g2.promise]);
+    expect(g1Ran).toBe(true);
   });
 
   it("reports keyDepth including the running job", async () => {

@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { AttachmentBuilder, SlashCommandBuilder } from "discord.js";
 import { classifyFailure } from "../../claude/errors.js";
+import { CLAUDE_LINK_REQUIRED } from "../../claude/identity-store.js";
 import { DISCORD_MESSAGE_LIMIT, splitMessage } from "../splitter.js";
 import type { Command } from "./types.js";
 
@@ -28,6 +29,12 @@ export const ask: Command = {
       await interaction.reply({ content: "This command only works in servers.", ephemeral: true });
       return;
     }
+    const claudeToken = ctx.claude.getToken(interaction.user.id);
+    if (!claudeToken) {
+      await interaction.reply({ content: CLAUDE_LINK_REQUIRED, ephemeral: true });
+      return;
+    }
+
     const prompt = interaction.options.getString("prompt", true);
     const isPrivate = interaction.options.getBoolean("private") ?? false;
     await interaction.deferReply({ ephemeral: isPrivate });
@@ -38,12 +45,13 @@ export const ask: Command = {
 
     const startedAt = new Date().toISOString();
     const runId = randomUUID();
-    const { promise } = ctx.queue.enqueue(interaction.guildId, () =>
+    const { promise } = ctx.queue.enqueue(interaction.user.id, () =>
       ctx.engine({
         prompt,
         cwd,
         model: config.model ?? ctx.env.CLAUDE_MODEL,
         mode: "chat",
+        claudeToken,
         systemPromptExtra: config.systemPromptExtra,
         maxTurns: 6,
       }),

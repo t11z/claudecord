@@ -1,16 +1,8 @@
 import { z } from "zod";
 
 const envSchema = z.object({
-  CLAUDE_CODE_OAUTH_TOKEN: z.string().min(1).optional(),
-  ANTHROPIC_API_KEY: z.string().min(1).optional(),
   DISCORD_BOT_TOKEN: z.string().min(1).optional(),
   DISCORD_APPLICATION_ID: z.string().min(1).optional(),
-  /**
-   * GitHub token for `git`/`gh` inside agentic runs. GH_TOKEN is accepted as
-   * an alias so an existing gh setup works unchanged; GITHUB_TOKEN wins.
-   */
-  GITHUB_TOKEN: z.string().min(1).optional(),
-  GH_TOKEN: z.string().min(1).optional(),
   /**
    * GitHub App credentials for per-user OAuth Device Flow linking. When set,
    * role-gated Discord users can `/link-github` their own account and agentic

@@ -22,8 +22,20 @@ claudecord has two capability modes:
 In agentic mode, **anyone allowed to talk to the bot can indirectly execute
 commands on the host**. Prompt injection is not a theoretical risk: a crafted
 message (or a file the bot is asked to read) can instruct Claude to run
-arbitrary shell commands, including reading environment variables such as your
-`CLAUDE_CODE_OAUTH_TOKEN`.
+arbitrary shell commands, including reading environment variables such as the
+acting user's own linked Claude/GitHub tokens.
+
+claudecord has no shared, instance-wide Claude or GitHub credential — every
+run is billed to, and acts as, the Discord user who sent the message (see
+`/link-claude` and `/link-github`). This bounds the blast radius of a
+successful prompt injection to that one user's own tokens: it can never
+exfiltrate another user's subscription or GitHub account, and it can never
+touch an operator-wide secret, because there isn't one.
+
+A thread's Claude session is still **shared conversation state**: several
+users can drive the same thread, and any file one of them has Claude write
+into the thread's scratch workspace is readable by the next person who
+speaks in it. Don't treat a thread's workspace as private to whoever started it.
 
 Mitigations built into the project:
 
@@ -37,12 +49,19 @@ Operator responsibilities:
 
 - Only enable agentic mode on servers where you trust every allowed role.
 - Run the bot in Docker (or an equivalent sandbox) when agentic mode is on.
-- Treat the OAuth token as compromised if an untrusted party had agentic
-  access; revoke and re-issue with `claude setup-token`.
+
+User responsibilities:
+
+- Treat your own linked token as compromised if you used agentic mode on a
+  server with untrusted members; `/link-claude unlink` (or `/link-github
+  unlink`) and relink with a freshly issued token.
 
 ## Secrets handling
 
-- Tokens are read from environment variables and never written to the
-  database or logs.
+- Per-user Claude and GitHub tokens are entered through Discord (a modal for
+  `/link-claude`, the OAuth Device Flow for `/link-github`) and stored in
+  `DATA_DIR/secrets.json` (chmod 600) — never in the database, never in logs.
+- The Discord bot token and, optionally, GitHub App credentials are the only
+  instance-wide secrets, read from environment variables or the dashboard.
 - The dashboard refuses to start on a non-localhost interface unless
   `DASHBOARD_PASSWORD` is set.

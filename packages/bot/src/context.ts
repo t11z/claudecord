@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import type { Database } from "better-sqlite3";
 import type { Client } from "discord.js";
+import { ClaudeIdentityStore } from "./claude/identity-store.js";
 import { type ClaudeEngine, createClaudeEngine } from "./claude/runner.js";
 import { openDatabase } from "./db/database.js";
 import { AppConfigRepo } from "./db/repos/app-config.js";
@@ -30,6 +31,8 @@ export interface AppContext {
   credentials: () => EffectiveCredentials;
   /** Per-user linked GitHub identities (tokens for acting in their namespace). */
   github: GithubIdentityStore;
+  /** Per-user linked Claude Code OAuth tokens — every run is billed to its author. */
+  claude: ClaudeIdentityStore;
   engine: ClaudeEngine;
   queue: RunQueue;
   /** threadId → AbortController for currently running queries. */
@@ -37,8 +40,6 @@ export interface AppContext {
   startedAt: number;
   /** Set once the Discord client has logged in. */
   discord: Client | null;
-  /** Result of the last Claude auth check (null = not yet run). */
-  authValid: boolean | null;
 }
 
 export function createContext(env: Env, logger: Logger): AppContext {
@@ -53,6 +54,7 @@ export function createContext(env: Env, logger: Logger): AppContext {
     },
     logger,
   );
+  const claude = new ClaudeIdentityStore(secrets);
 
   const ctx: AppContext = {
     env,
@@ -67,15 +69,12 @@ export function createContext(env: Env, logger: Logger): AppContext {
     secrets,
     credentials,
     github,
-    engine: createClaudeEngine(() => {
-      const c = credentials();
-      return { oauthToken: c.oauthToken, apiKey: c.apiKey };
-    }),
+    claude,
+    engine: createClaudeEngine(),
     queue: new RunQueue(env.MAX_CONCURRENT_RUNS),
     activeRuns: new Map(),
     startedAt: Date.now(),
     discord: null,
-    authValid: null,
   };
   return ctx;
 }
