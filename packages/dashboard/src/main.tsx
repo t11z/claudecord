@@ -1,6 +1,6 @@
 import { type JSX, render } from "preact";
 import { useEffect, useState } from "preact/hooks";
-import { api, type AuthUserDto, type MeDto } from "./api.ts";
+import { type AuthUserDto, api, type MeDto } from "./api.ts";
 import { Card } from "./components.tsx";
 import { Access } from "./pages/Access.tsx";
 import { Account } from "./pages/Account.tsx";

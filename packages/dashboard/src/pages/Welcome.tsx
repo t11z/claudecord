@@ -15,9 +15,10 @@ export function Welcome(props: { me: MeDto; onComplete: () => void }) {
 
   const [githubState, setGithubState] = useState<GithubState>("idle");
   const [githubMessage, setGithubMessage] = useState<string | null>(null);
-  const [deviceCode, setDeviceCode] = useState<{ userCode: string; verificationUri: string } | null>(
-    null,
-  );
+  const [deviceCode, setDeviceCode] = useState<{
+    userCode: string;
+    verificationUri: string;
+  } | null>(null);
   const pollTimer = useRef<number | null>(null);
 
   useEffect(() => {
@@ -58,7 +59,11 @@ export function Welcome(props: { me: MeDto; onComplete: () => void }) {
       }
       setDeviceCode({ userCode: device.userCode, verificationUri: device.verificationUri });
       setGithubState("waiting");
-      poll(device.deviceCode, (device.interval ?? 5) * 1000, Date.now() + (device.expiresIn ?? 900) * 1000);
+      poll(
+        device.deviceCode,
+        (device.interval ?? 5) * 1000,
+        Date.now() + (device.expiresIn ?? 900) * 1000,
+      );
     } catch (err) {
       setGithubState("error");
       setGithubMessage(err instanceof Error ? err.message : String(err));
@@ -112,9 +117,7 @@ export function Welcome(props: { me: MeDto; onComplete: () => void }) {
             <>
               <h2 style="margin-top:0">Signed in as {me.user.globalName ?? me.user.username}</h2>
               {me.guilds.length > 0 ? (
-                <p class="muted">
-                  Shared with the bot: {me.guilds.map((g) => g.name).join(", ")}.
-                </p>
+                <p class="muted">Shared with the bot: {me.guilds.map((g) => g.name).join(", ")}.</p>
               ) : null}
             </>
           ) : null}

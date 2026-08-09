@@ -11,9 +11,10 @@ export function Account(props: { me: MeDto; onChange: () => void }) {
 
   const [githubBusy, setGithubBusy] = useState(false);
   const [githubMessage, setGithubMessage] = useState<string | null>(null);
-  const [deviceCode, setDeviceCode] = useState<{ userCode: string; verificationUri: string } | null>(
-    null,
-  );
+  const [deviceCode, setDeviceCode] = useState<{
+    userCode: string;
+    verificationUri: string;
+  } | null>(null);
 
   const [usage, setUsage] = useState<Awaited<ReturnType<typeof api.meUsage>> | null>(null);
 
@@ -94,7 +95,9 @@ export function Account(props: { me: MeDto; onChange: () => void }) {
       <div class="grid">
         <Stat label="Signed in as" value={me.user.globalName ?? me.user.username ?? me.user.id} />
         {usage ? <Stat label="Runs (30d)" value={usage.totalRuns} /> : null}
-        {usage ? <Stat label="Est. cost (30d)" value={`$${usage.totalCostUsd.toFixed(2)}`} /> : null}
+        {usage ? (
+          <Stat label="Est. cost (30d)" value={`$${usage.totalCostUsd.toFixed(2)}`} />
+        ) : null}
       </div>
 
       <Card title="Claude subscription">
@@ -116,7 +119,9 @@ export function Account(props: { me: MeDto; onChange: () => void }) {
           </button>
         ) : null}
         <p class="muted" style="margin-top:0.8rem">
-          {me.claude.linked ? "Replace it with a fresh token:" : "Link a token from claude setup-token:"}
+          {me.claude.linked
+            ? "Replace it with a fresh token:"
+            : "Link a token from claude setup-token:"}
         </p>
         <label class="field">
           <span>Token</span>
