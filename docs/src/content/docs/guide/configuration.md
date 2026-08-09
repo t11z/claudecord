@@ -20,7 +20,7 @@ one. Every user links their own with `/link-claude` (see
 | `GITHUB_APP_CLIENT_SECRET` | — | GitHub App client secret (pairs with the client ID) |
 | `DASHBOARD_HOST` | `127.0.0.1` | Dashboard bind address |
 | `DASHBOARD_PORT` | `3000` | Dashboard port |
-| `DASHBOARD_PUBLIC_URL` | `http://localhost:<port>` | Base URL baked into `/dashboard` sign-in links — set explicitly once the browser isn't on the same machine as the bot ([Dashboard accounts](/claudecord/guide/dashboard-accounts/)) |
+| `DASHBOARD_PUBLIC_URL` | `http://localhost:<port>` | Base URL baked into `/dashboard` sign-in links — set explicitly once the browser isn't on the same machine as the bot ([Dashboard accounts](/claudecord/guide/dashboard-accounts/)). A trailing slash is tolerated (stripped). An `https://` value also marks the session cookie `Secure`. |
 | `DASHBOARD_ADMIN_IDS` | — | Comma-separated Discord user IDs that are always dashboard admins |
 | `CLAUDE_MODEL` | `claude-sonnet-5` | Default model for new conversations |
 | `DATA_DIR` | `./data` | SQLite DB, secrets store, per-thread workspaces |

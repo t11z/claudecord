@@ -103,4 +103,14 @@ describe("route gating: /api/auth/* is intentionally exempt", () => {
     expect((await app.request("/api/auth/session")).status).toBe(200);
     expect((await app.request("/api/auth/logout", { method: "POST" })).status).toBe(200);
   });
+
+  it("both link routes reach their handler with no session — 400, not 401", async () => {
+    // Regression guard for the registration-order trap: authRoutes() must
+    // stay registered *before* `app.use("/api/*", requireAdmin(...))` in
+    // server.ts. If the POST redeem route ever landed after that gate, every
+    // sign-in would 401 instead of running the handler at all.
+    const { app } = makeApp();
+    expect((await app.request("/api/auth/link")).status).toBe(400);
+    expect((await app.request("/api/auth/link", { method: "POST" })).status).toBe(400);
+  });
 });

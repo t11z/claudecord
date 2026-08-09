@@ -28,6 +28,12 @@ function hmac(secret: string, payload: string): string {
   return crypto.createHmac("sha256", secret).update(payload).digest("base64url");
 }
 
+/** Strips the wire-only fields, leaving exactly the Discord-verified claims. */
+function toClaims(payload: TokenPayload): MagicLinkClaims {
+  const { exp: _exp, nonce: _nonce, ...claims } = payload;
+  return claims;
+}
+
 /**
  * Issues and redeems magic links. Single-use is enforced with an in-memory
  * nonce set — a restart dropping pending (unredeemed) links is harmless at a
@@ -52,8 +58,34 @@ export class MagicLinkIssuer {
     return `${encoded}.${hmac(this.secret, encoded)}`;
   }
 
+  /**
+   * Verifies a token *without* spending it — signature, expiry and
+   * nonce-not-yet-used, but no marking. Exists so `GET /api/auth/link` can
+   * render its interstitial (and say "expired" immediately when it can't)
+   * without burning the single use — see `web/routes/auth.ts` for why a GET
+   * must never consume.
+   */
+  peek(token: string): MagicLinkClaims | null {
+    const payload = this.parse(token);
+    return payload ? toClaims(payload) : null;
+  }
+
   /** Verifies, single-use-checks and consumes a token. Returns null if invalid, expired, tampered or already used. */
   consume(token: string): MagicLinkClaims | null {
+    const payload = this.parse(token);
+    if (!payload) return null;
+    this.usedNonces.set(payload.nonce, payload.exp);
+    return toClaims(payload);
+  }
+
+  /**
+   * Shared verification for `peek` and `consume`. Deliberately does not mark
+   * the nonce used — that is `consume`'s one extra job, which is what keeps
+   * `peek` from being a single-use bypass. Calls `prune` first like `consume`
+   * always did; `prune` only drops nonces whose token has expired anyway, so
+   * running it from this read path changes nothing observable.
+   */
+  private parse(token: string): TokenPayload | null {
     this.prune();
     const dot = token.lastIndexOf(".");
     if (dot <= 0) return null;
@@ -75,10 +107,7 @@ export class MagicLinkIssuer {
     }
     if (typeof payload.exp !== "number" || payload.exp <= this.now()) return null;
     if (typeof payload.nonce !== "string" || this.usedNonces.has(payload.nonce)) return null;
-
-    this.usedNonces.set(payload.nonce, payload.exp);
-    const { exp: _exp, nonce: _nonce, ...claims } = payload;
-    return claims;
+    return payload;
   }
 
   /** Drops nonce entries whose token has expired anyway — bounds memory. */

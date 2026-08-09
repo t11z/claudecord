@@ -21,15 +21,43 @@ user-facing story. The implementation, module by module:
   (`{sub, username, globalName, avatarUrl, hasManageGuild}`). Single-use is
   enforced with an in-memory consumed-nonce set — losing it on restart is
   harmless given the TTL.
-- `web/routes/auth.ts` — `GET /api/auth/link` consumes the token, decides
-  `isAdmin` (`decideIsAdmin`: env override → sticky existing flag → claim
-  on first login with Manage Guild), upserts `dashboard_users`, issues the
-  session cookie, and 302s to `/` with `Referrer-Policy: no-referrer` so the
-  spent token doesn't leak via the next page's referrer.
+- `web/routes/auth.ts` — the link redeem is two steps, not one:
+  - `GET /api/auth/link` verifies the token with `MagicLinkIssuer.peek()`
+    (signature, expiry, not-yet-used) **without spending it**, and renders a
+    tiny auto-submitting interstitial page. Side-effect-free: no role
+    decision, no `dashboard_users` write, no cookie.
+  - `POST /api/auth/link` — submitted by that interstitial — is the only
+    place a link is ever spent: `consume()`, decide `isAdmin`
+    (`decideIsAdmin`: env override → sticky existing flag → claim on first
+    login with Manage Guild), upsert `dashboard_users`, issue the session
+    cookie, 303 to `/` (303 so the browser turns the POST into a `GET /`
+    rather than replaying it).
+
+  Both responses carry `Referrer-Policy: no-referrer` and
+  `Cache-Control: no-store`. `no-referrer` is load-bearing, not hygiene: the
+  interstitial's own URL carries the token, so without it the browser would
+  send `Referer: …/api/auth/link?token=…` on the POST.
+
+  **Why not redeem on GET, like before?** Discord's own link-preview crawler
+  (`Discordbot/2.0`) fetches every URL in a message it renders, including an
+  ephemeral one. When redemption happened on GET, the crawler consumed the
+  single-use token seconds before the human clicked — every real click got
+  "invalid or expired", and on a fresh install with no admin yet, the crawler
+  even took the claim-on-first-login bootstrap. `/dashboard`'s reply also
+  wraps the link in `<…>` and sets `MessageFlags.SuppressEmbeds` as
+  belt-and-braces, but neither is a documented guarantee that Discord won't
+  fetch it — the real fix is that GET no longer writes anything. A bare
+  `HEAD` needs no separate handling either: Hono re-dispatches `HEAD` as
+  `GET` internally, so it's automatically harmless once GET is.
 - `web/auth.ts` (`DashboardAuth`) — signs/verifies the session cookie
   (`{sub, isAdmin, exp}`), HMAC over `app_config`'s
-  `dashboard_cookie_secret`, HttpOnly + `SameSite=Strict`, 30-day rolling
-  TTL (re-issued on every authenticated request via `touch`).
+  `dashboard_cookie_secret`, HttpOnly + `Secure` (when `DASHBOARD_PUBLIC_URL`
+  is https — see `context.ts`) + `SameSite=Strict`, 30-day rolling TTL
+  (re-issued on every authenticated request via `touch`). `SameSite=Strict`
+  stays Strict even with the two-step redeem above: the cookie is set on a
+  same-site POST from our own interstitial page, not on a cross-site
+  navigation from discord.com, so it's still sent on the follow-up
+  `303 → GET /`.
 - `web/middleware.ts` — three gates:
   - `requireUser()` — 401 if no session. Gates `/api/me/*` only.
   - `requireAdmin()` — 401 no session, 403 non-admin. Every route that
@@ -62,7 +90,8 @@ Unauthenticated:
 
 | Method & path | Purpose |
 | --- | --- |
-| `GET /api/auth/link` | redeem a `/dashboard` magic link, issue the session cookie |
+| `GET /api/auth/link` | render the auto-submitting interstitial — verifies the token, never spends it |
+| `POST /api/auth/link` | spend the token, issue the session cookie, 303 to `/` |
 | `GET /api/auth/session` | current session's user + role, or `{user: null}` |
 | `POST /api/auth/logout` | clear the session cookie |
 

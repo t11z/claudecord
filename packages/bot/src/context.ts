@@ -66,7 +66,14 @@ export function createContext(env: Env, logger: Logger): AppContext {
   );
   const claude = new ClaudeIdentityStore(secrets);
   const appConfig = new AppConfigRepo(db);
-  const auth = new DashboardAuth(appConfig);
+  // Secure on the session cookie, but only when the URL we actually hand out
+  // is https — setting it unconditionally would make the cookie unsettable
+  // (and the dashboard unreachable) on a plain-http instance. Deliberately
+  // not derived from X-Forwarded-Proto: that would be a trust-the-proxy
+  // decision this codebase makes nowhere else.
+  const auth = new DashboardAuth(appConfig, {
+    secure: env.DASHBOARD_PUBLIC_URL?.startsWith("https://") ?? false,
+  });
   const magicLinkSecret = appConfig.getOrInit("magic_link_secret", () =>
     crypto.randomBytes(32).toString("base64url"),
   );

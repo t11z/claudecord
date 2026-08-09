@@ -1,9 +1,10 @@
 import {
   type ChatInputCommandInteraction,
+  MessageFlags,
   PermissionFlagsBits,
   SlashCommandBuilder,
 } from "discord.js";
-import type { AppContext } from "../../context.js";
+import type { Env } from "../../env.js";
 import { isAllowed } from "../access-control.js";
 import type { Command } from "./types.js";
 
@@ -16,8 +17,15 @@ function memberRoleIds(interaction: ChatInputCommandInteraction): string[] {
   return [...roles.cache.keys()]; // GuildMember
 }
 
-function publicUrl(ctx: AppContext): string {
-  return ctx.env.DASHBOARD_PUBLIC_URL ?? `http://localhost:${ctx.env.DASHBOARD_PORT}`;
+/**
+ * Base URL for the sign-in link. Trailing slashes are stripped: a configured
+ * `DASHBOARD_PUBLIC_URL` ending in `/` would build `…//api/auth/link`, which
+ * Hono does not match — the request falls through to `serveStatic` and gets
+ * a silent 200 with the SPA instead of a login, with no error anywhere.
+ */
+export function publicUrl(env: Env): string {
+  const base = env.DASHBOARD_PUBLIC_URL ?? `http://localhost:${env.DASHBOARD_PORT}`;
+  return base.replace(/\/+$/, "");
 }
 
 export const dashboard: Command = {
@@ -60,10 +68,14 @@ export const dashboard: Command = {
     });
 
     await interaction.reply({
-      ephemeral: true,
+      // Ephemeral via flags (the `ephemeral` boolean is deprecated), plus
+      // SuppressEmbeds, plus the URL in angle brackets: three separate asks
+      // to Discord not to unfurl this link. None is a guarantee — the actual
+      // fix is that `GET /api/auth/link` writes nothing; see web/routes/auth.ts.
+      flags: [MessageFlags.Ephemeral, MessageFlags.SuppressEmbeds],
       content: [
         "**Your dashboard sign-in link** (works once, expires in 5 minutes):",
-        `${publicUrl(ctx)}/api/auth/link?token=${token}`,
+        `<${publicUrl(ctx.env)}/api/auth/link?token=${token}>`,
         "",
         "-# Don't share this link — anyone who opens it signs in as you.",
       ].join("\n"),

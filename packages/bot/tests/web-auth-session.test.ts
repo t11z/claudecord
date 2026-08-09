@@ -5,9 +5,9 @@ import { AppConfigRepo } from "../src/db/repos/app-config.js";
 import { DashboardAuth } from "../src/web/auth.js";
 import { requireAdmin, requireUser } from "../src/web/middleware.js";
 
-function makeAuth(now?: () => number): DashboardAuth {
+function makeAuth(now?: () => number, secure?: boolean): DashboardAuth {
   const db = openMemoryDatabase();
-  return new DashboardAuth(new AppConfigRepo(db), now);
+  return new DashboardAuth(new AppConfigRepo(db), { now, secure });
 }
 
 /** Pulls just the `name=value` pair off a Set-Cookie header for reuse as a request Cookie header. */
@@ -91,6 +91,37 @@ describe("DashboardAuth session cookie", () => {
     const cleared = cookiePair(clearRes);
     const res = await app.request("/check", { headers: { Cookie: cleared } });
     expect(await res.json()).toBeNull();
+  });
+});
+
+describe("session cookie Secure flag", () => {
+  // Split on ";" and compare tokens rather than `toContain` on the raw
+  // header — the base64url cookie value could in principle contain the
+  // substring "Secure".
+  function attrs(res: Response): string[] {
+    const raw = res.headers.get("set-cookie");
+    if (!raw) throw new Error("no set-cookie header in response");
+    return raw.split(";").map((s) => s.trim());
+  }
+
+  it("sets Secure when configured", async () => {
+    const auth = makeAuth(undefined, true);
+    const app = new Hono();
+    app.get("/set", (c) => {
+      auth.issueCookie(c, { sub: "u1", isAdmin: true });
+      return c.text("ok");
+    });
+    expect(attrs(await app.request("/set"))).toContain("Secure");
+  });
+
+  it("omits Secure by default", async () => {
+    const auth = makeAuth();
+    const app = new Hono();
+    app.get("/set", (c) => {
+      auth.issueCookie(c, { sub: "u1", isAdmin: true });
+      return c.text("ok");
+    });
+    expect(attrs(await app.request("/set"))).not.toContain("Secure");
   });
 });
 

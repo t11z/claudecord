@@ -21,6 +21,18 @@ interface SessionPayload extends Session {
   exp: number;
 }
 
+export interface DashboardAuthOptions {
+  /**
+   * Sets `Secure` on the session cookie. Not unconditional: a Secure cookie
+   * cannot be set over plain http, which is the normal `npm run dev` /
+   * `http://localhost:3000` setup — forcing it on would lock local dev out of
+   * its own dashboard. `context.ts` derives it from `DASHBOARD_PUBLIC_URL`
+   * being https.
+   */
+  secure?: boolean;
+  now?: () => number;
+}
+
 function hmac(secret: string, payload: string): string {
   return crypto.createHmac("sha256", secret).update(payload).digest("base64url");
 }
@@ -29,14 +41,20 @@ function hmac(secret: string, payload: string): string {
  * Signs and verifies the dashboard session cookie. There is no password path
  * anymore — the only way to mint a session is redeeming a magic link from
  * `/dashboard` (see `magic-link.ts` and `routes/auth.ts`).
+ *
+ * `sameSite: "Strict"` stays Strict even now that redemption is a two-step
+ * GET-then-POST flow: the cookie is set on a same-site POST from our own
+ * interstitial page, not on a cross-site navigation from discord.com, so
+ * Strict is still sent on the follow-up 303 → `GET /`.
  */
 export class DashboardAuth {
   private readonly secret: string;
+  private readonly secure: boolean;
+  private readonly now: () => number;
 
-  constructor(
-    appConfig: AppConfigRepo,
-    private readonly now: () => number = Date.now,
-  ) {
+  constructor(appConfig: AppConfigRepo, options: DashboardAuthOptions = {}) {
+    this.secure = options.secure ?? false;
+    this.now = options.now ?? Date.now;
     this.secret = appConfig.getOrInit("dashboard_cookie_secret", () =>
       crypto.randomBytes(32).toString("base64url"),
     );
@@ -47,6 +65,7 @@ export class DashboardAuth {
     const encoded = Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
     setCookie(c, COOKIE_NAME, `${encoded}.${hmac(this.secret, encoded)}`, {
       httpOnly: true,
+      secure: this.secure,
       sameSite: "Strict",
       path: "/",
       maxAge: Math.floor(SESSION_TTL_MS / 1000),
@@ -54,7 +73,7 @@ export class DashboardAuth {
   }
 
   clearCookie(c: Context): void {
-    deleteCookie(c, COOKIE_NAME, { path: "/" });
+    deleteCookie(c, COOKIE_NAME, { path: "/", secure: this.secure });
   }
 
   /** Verifies and decodes the session cookie, or null if absent/tampered/expired. */

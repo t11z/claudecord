@@ -16,18 +16,21 @@ it. The bot replies — visible only to you — with a link:
 http://your-host:3000/api/auth/link?token=...
 ```
 
-Open it within 5 minutes and it works exactly once: it signs you in and
-redirects to the dashboard. A second click (or someone else opening a link
-they found in your chat history) fails — the link is already spent. Don't
-share it; anyone who opens it signs in as you.
+Open it within 5 minutes and it works exactly once. You'll see a "Signing you
+in…" page flash past — that's a brief interstitial that submits the link for
+you (a `<noscript>` button covers browsers without JS) — and it lands you on
+the dashboard. A second visit (or someone else opening a link they found in
+your chat history) fails — the link is already spent. Don't share it; anyone
+who opens it signs in as you.
 
 Upgrading an install that predates this model? The first admin to sign in
 gets a one-time wizard for whatever the old password/shared-token setup left
 behind — see [Upgrading from the old auth
 model](/claudecord/guide/migration/).
 
-The session itself is a signed, `HttpOnly`, `SameSite=Strict` cookie, good
-for 30 days and renewed on every request while you're active.
+The session itself is a signed, `HttpOnly`, `SameSite=Strict` cookie — also
+`Secure` when the dashboard is served over https — good for 30 days and
+renewed on every request while you're active.
 
 ## The two roles
 

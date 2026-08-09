@@ -88,7 +88,11 @@ async function adminCookie(ctx: AppContext, app: Hono, sub = "admin1"): Promise<
     avatarUrl: null,
     hasManageGuild: true,
   });
-  const res = await app.request(`/api/auth/link?token=${token}`, { redirect: "manual" });
+  const res = await app.request("/api/auth/link", {
+    method: "POST",
+    body: new URLSearchParams({ token }),
+    redirect: "manual",
+  });
   const raw = res.headers.get("set-cookie");
   if (!raw) throw new Error("no set-cookie header");
   return raw.split(";")[0]!;

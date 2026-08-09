@@ -62,6 +62,10 @@ There's no password — see
   there's no way to sign in from the browser alone.
 - The link is single-use and expires in 5 minutes — if you opened it once
   already (or waited too long), run `/dashboard` again for a fresh one.
+- **On versions before 1.3.1**: if the *very first* click already said
+  "invalid or expired," that wasn't you — Discord's own link-preview crawler
+  fetched the link before you did and spent it. Fixed in 1.3.1, where
+  `GET /api/auth/link` no longer spends the token; upgrade and try again.
 - If the dashboard is on a different machine than your browser, the operator
   needs `DASHBOARD_PUBLIC_URL` set to the address you actually browse to —
   otherwise the link points at `localhost` from the bot's perspective and

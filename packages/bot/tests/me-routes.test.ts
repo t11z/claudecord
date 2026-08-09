@@ -83,8 +83,9 @@ function makeApp(): { ctx: AppContext; app: Hono } {
 
 /**
  * Mints and redeems a real magic link for `sub`, returning the resulting
- * session cookie — reuses the actual /api/auth/link handler rather than
- * poking DashboardAuth directly, so these tests build on proven auth code.
+ * session cookie — reuses the actual /api/auth/link POST handler (the way
+ * the interstitial submits it) rather than poking DashboardAuth directly, so
+ * these tests build on proven auth code.
  */
 async function cookieFor(ctx: AppContext, app: Hono, sub: string): Promise<string> {
   const token = ctx.magicLink.mint({
@@ -94,7 +95,11 @@ async function cookieFor(ctx: AppContext, app: Hono, sub: string): Promise<strin
     avatarUrl: null,
     hasManageGuild: false,
   });
-  const res = await app.request(`/api/auth/link?token=${token}`, { redirect: "manual" });
+  const res = await app.request("/api/auth/link", {
+    method: "POST",
+    body: new URLSearchParams({ token }),
+    redirect: "manual",
+  });
   const raw = res.headers.get("set-cookie");
   if (!raw) throw new Error("no set-cookie header");
   return raw.split(";")[0]!;
