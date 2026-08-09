@@ -30,19 +30,31 @@ user-facing story. The implementation, module by module:
   (`{sub, isAdmin, exp}`), HMAC over `app_config`'s
   `dashboard_cookie_secret`, HttpOnly + `SameSite=Strict`, 30-day rolling
   TTL (re-issued on every authenticated request via `touch`).
-- `web/middleware.ts` — `requireUser()` (401 if no session) and
-  `requireAdmin()` (401 no session, 403 non-admin). Every route that existed
-  before per-user accounts requires admin — see `web/server.ts`
-  (`buildApiApp`) for exactly where the gate is mounted: `authRoutes` is
-  registered first (unauthenticated), then `app.use("/api/*", requireAdmin(...))`,
-  then everything else. Route registration order is load-bearing for this —
-  see the comment in `server.ts`.
+- `web/middleware.ts` — three gates:
+  - `requireUser()` — 401 if no session. Gates `/api/me/*` only.
+  - `requireAdmin()` — 401 no session, 403 non-admin. Every route that
+    existed before per-user accounts requires this.
+  - `requireGuildManager(ctx)` — 401 no session; otherwise passes an admin
+    through unconditionally, or does a single-member REST fetch
+    (`guild.members.fetch(id)`, no privileged Guild Members intent needed —
+    that's only for bulk/gateway member caching) to check Manage Guild on
+    the guild named by the route's `:id` param. Gates
+    `GET`/`PUT /api/guilds/:id/config` only.
 
-`tests/web-route-gating.test.ts` asserts this holds across every
-pre-existing route by building the real app (`buildApiApp(ctx, false)`, no
-port bound) and checking 401/403/pass-through for no-session, non-admin and
-admin sessions respectively — this is the test that turns "someone forgot a
-gate" into a red CI run instead of a review question.
+  See `web/server.ts` (`buildApiApp`) for exactly where each gate is
+  mounted: `authRoutes`, then `meRoutes`, then `guildConfigRoutes` are all
+  registered *before* `app.use("/api/*", requireAdmin(...))`, so they're
+  exempt from the blanket gate and rely on their own instead — route
+  registration order is load-bearing for this, see the comment in
+  `server.ts`.
+
+`tests/web-route-gating.test.ts` asserts the blanket-admin set holds across
+every pre-existing route by building the real app (`buildApiApp(ctx, false)`,
+no port bound) and checking 401/403/pass-through for no-session, non-admin
+and admin sessions respectively; `tests/me-routes.test.ts` and
+`tests/require-guild-manager.test.ts` do the same for the other two gates.
+This is what turns "someone forgot a gate" into a red CI run instead of a
+review question.
 
 ### Endpoints
 
@@ -54,14 +66,30 @@ Unauthenticated:
 | `GET /api/auth/session` | current session's user + role, or `{user: null}` |
 | `POST /api/auth/logout` | clear the session cookie |
 
+Self-scoped (behind `requireUser()` — always the caller's own `sub`, never a path/body id):
+
+| Method & path | Purpose |
+| --- | --- |
+| `GET /api/me` | profile, Claude/GitHub link status, onboarding-complete flag, mutual guilds |
+| `POST`/`DELETE /api/me/claude` | link (validates via `checkClaudeAuth`) / unlink your own Claude token |
+| `POST /api/me/github/device`, `POST /api/me/github/device/poll` | GitHub Device Flow, one step each — no server-side pending state, the `deviceCode` round-trips through the browser |
+| `POST /api/me/github/skip` | mark GitHub onboarding skipped (remembered, not re-asked) |
+| `DELETE /api/me/github` | unlink your own GitHub account (best-effort revoke) |
+| `GET /api/me/usage?window=30` | your own usage totals only |
+
+Guild-scoped (behind `requireGuildManager()` — admin, or Manage Guild on that specific guild):
+
+| Method & path | Purpose |
+| --- | --- |
+| `GET/PUT /api/guilds/:id/config` | allowlists, agentic toggle, model, extra prompt (GET includes channel/role pickers) |
+
 Admin-only (behind `requireAdmin()`):
 
 | Method & path | Purpose |
 | --- | --- |
 | `GET /api/status` | connection state, linked-identity counts, queue, invite URL |
 | `POST /api/setup/github-app` | store/clear the GitHub App used for `/link-github` |
-| `GET /api/guilds` | servers the bot is in |
-| `GET/PUT /api/guilds/:id/config` | allowlists, agentic toggle, model, extra prompt (GET includes channel/role pickers) |
+| `GET /api/guilds` | the full guild list, instance-wide |
 | `GET /api/github/identities`, `DELETE /api/github/identities/:id` | per-user GitHub links |
 | `GET /api/claude/identities`, `DELETE .../:id`, `POST .../:id/check` | per-user Claude links |
 | `GET /api/sessions` | thread↔session table with live running state |
@@ -88,6 +116,14 @@ Deliberately boring:
 - Theme in `src/theme.css`: CSS custom properties, serif headings, light
   mode leans Anthropic (cream/terracotta), dark mode leans Discord
   (ink/blurple) via `prefers-color-scheme`.
+
+`main.tsx` branches on `GET /api/auth/session` into `SignedOut` (no
+session), `MemberApp` (session, not admin), or `AdminApp` (session, admin).
+`MemberApp` further branches on `GET /api/me`'s `onboardingComplete`:
+`Welcome.tsx` (the three-step wizard) while incomplete, `Account.tsx`
+(self-service link status + usage) once done. `AdminApp` is the unchanged
+five-page router (Overview/Setup/Access/Sessions/Usage) from before per-user
+accounts existed.
 
 ### Dev workflow
 

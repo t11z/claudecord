@@ -142,6 +142,48 @@ export interface AuthSessionDto {
   isAdmin: boolean;
 }
 
+export interface MeGuildDto {
+  id: string;
+  name: string;
+  iconUrl: string | null;
+}
+
+export interface MeDto {
+  user: AuthUserDto;
+  claude: { linked: boolean; lastVerifiedAt: string | null };
+  github: { linked: boolean; login: string | null; skipped: boolean };
+  /** Derived, not stored: linked Claude, and either linked or skipped GitHub. */
+  onboardingComplete: boolean;
+  /** Servers this user shares with the bot — informational, not an access grant. */
+  guilds: MeGuildDto[];
+}
+
+export interface MeUsageDto {
+  windowDays: number;
+  totalRuns: number;
+  totalErrors: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  totalCostUsd: number;
+}
+
+export interface GithubDeviceStartDto {
+  ok: boolean;
+  message?: string;
+  userCode?: string;
+  verificationUri?: string;
+  deviceCode?: string;
+  interval?: number;
+  expiresIn?: number;
+}
+
+export interface GithubDevicePollDto {
+  status: "pending" | "authorized" | "error";
+  login?: string | null;
+  interval?: number;
+  message?: string;
+}
+
 export interface SetupResultDto {
   ok: boolean;
   message: string;
