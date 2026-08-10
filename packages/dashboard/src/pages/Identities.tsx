@@ -39,7 +39,7 @@ export function Identities() {
       <h1>Linked accounts</h1>
       <p class="muted">
         Linking and unlinking happen in Discord — <code>/link-claude link</code> and{" "}
-        <code>/link-github link</code> — or from a member's own account page. This is the view.
+        <code>/link-github link</code> — or from a member's own account page.
       </p>
 
       {me ? (

@@ -63,7 +63,7 @@ export function Usage() {
               {stats.lastRateLimitAt
                 ? ` Last rate limit: ${new Date(stats.lastRateLimitAt).toLocaleString()}.`
                 : " No rate limits hit."}{" "}
-              Cost is informational — with OAuth subscription auth there is no per-token bill.
+              The cost is an estimate for reference, not a bill.
             </p>
           </Card>
 

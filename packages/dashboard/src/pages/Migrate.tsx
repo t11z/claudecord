@@ -117,7 +117,7 @@ export function Migrate(props: { status: MigrationStatusDto; onComplete: () => v
               {legacy.claudeOauthToken ? (
                 <LegacyItem
                   title="Shared Claude token"
-                  description="secrets.json still has the old instance-wide Claude Code OAuth token. Adopt it as your own /link-claude identity, or discard it and link your own subscription later."
+                  description="Adopt the old shared Claude token as your own, or discard it and link your own subscription later."
                   claimLabel="Adopt as my Claude subscription"
                   onClaim={() => api.claimLegacyClaude()}
                   onDiscard={() => api.discardLegacyClaude()}
@@ -127,7 +127,7 @@ export function Migrate(props: { status: MigrationStatusDto; onComplete: () => v
               {legacy.anthropicApiKey ? (
                 <LegacyItem
                   title="Shared Anthropic API key"
-                  description="An ANTHROPIC_API_KEY-style credential can't become a per-user subscription token — claudecord now runs on Claude Code subscriptions only. It can only be discarded."
+                  description="An API key can't become a personal subscription token, so this one can only be discarded."
                   onDiscard={() => api.discardLegacyApiKey()}
                 />
               ) : null}
@@ -135,7 +135,7 @@ export function Migrate(props: { status: MigrationStatusDto; onComplete: () => v
               {legacy.githubToken ? (
                 <LegacyItem
                   title="Shared GitHub token"
-                  description="secrets.json still has the old instance-wide GitHub token. Adopt it as your own /link-github identity, or discard it."
+                  description="Adopt the old shared GitHub token as your own, or discard it."
                   claimLabel="Adopt as my GitHub account"
                   onClaim={() => api.claimLegacyGithub()}
                   onDiscard={() => api.discardLegacyGithub()}
@@ -145,7 +145,7 @@ export function Migrate(props: { status: MigrationStatusDto; onComplete: () => v
               {legacy.dashboardPassword ? (
                 <LegacyItem
                   title="Dashboard password"
-                  description="Dashboard login is now passwordless (sign in via /dashboard in Discord). The old password hash is no longer read and can be discarded."
+                  description="Sign-in no longer uses a password, so the old one can be discarded."
                   onDiscard={() => api.discardLegacyPassword()}
                 />
               ) : null}
@@ -155,8 +155,8 @@ export function Migrate(props: { status: MigrationStatusDto; onComplete: () => v
                   <strong>Missing display profiles</strong>
                   <p class="muted" style="margin:0.3rem 0">
                     {unresolvedProfiles.length} user{unresolvedProfiles.length === 1 ? "" : "s"}{" "}
-                    linked Claude or GitHub in Discord but never opened the dashboard, so their
-                    name/avatar aren't known yet. Resolve them from the bot's server member cache.
+                    linked Claude or GitHub in Discord but never opened the dashboard, so their name
+                    and avatar aren't known yet.
                   </p>
                   {backfillState === "done" ? (
                     <p>✅ {backfillMessage}</p>

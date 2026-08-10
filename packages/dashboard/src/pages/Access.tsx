@@ -140,12 +140,11 @@ export function Access() {
               ))}
             </div>
           </Card>
-          <Card title="GitHub roles (per-user GitHub)">
+          <Card title="GitHub roles">
             <p class="muted">
               Members with one of these roles can run <code>/link-github</code> to connect their own
-              GitHub account; agentic runs they start then act in <em>their</em> namespace. While
-              any role is selected, the shared GitHub token is not used on this server. No selection
-              = per-user gating off. Requires a GitHub App configured under Setup.
+              GitHub account. No selection = anyone may connect one. Requires a GitHub App
+              configured under Setup.
             </p>
             <div class="checkbox-list">
               {data.roles.map((r) => (
@@ -173,7 +172,14 @@ export function Access() {
               ⚠️ Agentic mode gives Claude file and shell tools inside a sandbox workspace. Anyone
               allowed to talk to the bot can <em>indirectly execute commands</em> via prompt
               injection. Only enable this on servers where you trust every allowed role, and run the
-              bot in Docker. Read the security docs first.
+              bot in Docker.{" "}
+              <a
+                href="https://t11z.github.io/claudecord/guide/access-control/"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Read the security docs first →
+              </a>
             </div>
             <label>
               <input

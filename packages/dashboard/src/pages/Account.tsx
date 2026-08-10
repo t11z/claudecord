@@ -1,6 +1,7 @@
 import { useEffect, useState } from "preact/hooks";
 import { api, type MeDto } from "../api.ts";
 import { Badge, Card, Stat } from "../components.tsx";
+import { GithubDeviceSteps } from "../GithubDeviceSteps.tsx";
 import { IdentityGraph } from "../IdentityGraph.tsx";
 import { useGithubDeviceFlow } from "../useGithubDeviceFlow.ts";
 
@@ -75,6 +76,9 @@ export function Account(props: { me: MeDto; onChange: () => void }) {
           <Stat label="Est. cost (30d)" value={`$${usage.totalCostUsd.toFixed(2)}`} />
         ) : null}
       </div>
+      {/* Members saw a dollar figure with no context; only the admin Usage page
+          said it isn't a bill. */}
+      {usage ? <p class="muted">The cost is an estimate for reference, not a bill.</p> : null}
 
       <Card title="Claude subscription">
         <p>
@@ -95,9 +99,13 @@ export function Account(props: { me: MeDto; onChange: () => void }) {
           </button>
         ) : null}
         <p class="muted" style="margin-top:0.8rem">
-          {me.claude.linked
-            ? "Replace it with a fresh token:"
-            : "Link a token from claude setup-token:"}
+          {me.claude.linked ? (
+            "Replace it with a fresh token:"
+          ) : (
+            <>
+              Link a token from <code>claude setup-token</code>:
+            </>
+          )}
         </p>
         <label class="field">
           <span>Token</span>
@@ -131,18 +139,10 @@ export function Account(props: { me: MeDto; onChange: () => void }) {
             Unlink
           </button>
         ) : github.device ? (
-          <>
-            <p>
-              1. Open{" "}
-              <a href={github.device.verificationUri} target="_blank" rel="noreferrer">
-                {github.device.verificationUri}
-              </a>
-            </p>
-            <p>
-              2. Enter this code: <code>{github.device.userCode}</code>
-            </p>
-            <p class="muted">Waiting for you to authorize…</p>
-          </>
+          <GithubDeviceSteps
+            userCode={github.device.userCode}
+            verificationUri={github.device.verificationUri}
+          />
         ) : githubBlocked ? (
           <p class="muted">{githubBlocked}</p>
         ) : (
@@ -152,7 +152,7 @@ export function Account(props: { me: MeDto; onChange: () => void }) {
         )}
         {github.message ? <p class="muted">{github.message}</p> : null}
         <p class="muted" style="margin-top:0.8rem">
-          Or run <code>/link-github link</code> in Discord — either way works.
+          Or run <code>/link-github link</code> in Discord.
         </p>
       </Card>
     </>

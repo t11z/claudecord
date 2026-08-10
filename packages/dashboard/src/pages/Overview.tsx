@@ -48,12 +48,8 @@ export function Overview() {
               {status.claudeIdentityCount} user{status.claudeIdentityCount === 1 ? "" : "s"} linked
             </Badge>
           ) : (
-            <Badge kind="warn">no one has linked yet</Badge>
+            <Badge kind="warn">nobody has linked yet</Badge>
           )}
-        </p>
-        <p class="muted">
-          There is no shared, instance-wide credential — every run is billed to the Discord user who
-          started it, via their own <code>/link-claude</code>.
         </p>
         <p class="muted">
           Default model: <code>{status.defaultModel}</code> · Bot:{" "}

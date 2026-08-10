@@ -4,6 +4,8 @@ import { Card } from "../components.tsx";
 
 type StepState = "pending" | "busy" | "done" | "error";
 
+const DOCS = "https://t11z.github.io/claudecord/guide";
+
 export function Setup() {
   const [discordConnected, setDiscordConnected] = useState(false);
 
@@ -18,6 +20,8 @@ export function Setup() {
   const [claudeCheckMessage, setClaudeCheckMessage] = useState<Record<string, string>>({});
 
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
+  /** Discord id → display name, so these lists don't show raw snowflakes. */
+  const [names, setNames] = useState<Record<string, string>>({});
 
   const loadGithubIdentities = () => {
     api
@@ -46,7 +50,22 @@ export function Setup() {
       .catch(() => {});
     loadGithubIdentities();
     loadClaudeIdentities();
+    // Same user set as the two identity lists below, but with profiles attached.
+    api
+      .identityGraph()
+      .then((g) => {
+        const map: Record<string, string> = {};
+        for (const row of g.rows) {
+          const name = row.globalName ?? row.username;
+          if (name) map[row.discordUserId] = name;
+        }
+        setNames(map);
+      })
+      .catch(() => {});
   }, []);
+
+  /** A display name when we know one, the raw id only as a last resort. */
+  const who = (discordUserId: string): string => names[discordUserId] ?? discordUserId;
 
   const submitApp = async () => {
     setAppState("busy");
@@ -99,48 +118,49 @@ export function Setup() {
   return (
     <>
       <h1>Setup</h1>
+      {/* Three steps the operator performs. The Claude card below is a status
+          readout, not a step, so it carries no number and no pip. */}
       <div class="wizard-steps">
         <div class={`step ${discordConnected ? "done" : ""}`} />
-        <div class={`step ${claudeIdentities.length > 0 ? "done" : ""}`} />
         <div class={`step ${appState === "done" ? "done" : ""}`} />
-        <div class={`step ${discordConnected ? "done" : ""}`} />
+        <div class={`step ${discordConnected && inviteUrl ? "done" : ""}`} />
       </div>
 
       <Card title="1 · Discord bot">
-        <p class="muted">
-          The bot token has no dashboard form anymore — since reaching this page at all requires{" "}
-          <code>/dashboard</code> to already work, and that needs the bot online. Create an
-          application at{" "}
-          <a href="https://discord.com/developers/applications" target="_blank" rel="noreferrer">
-            discord.com/developers
-          </a>
-          , add a <strong>Bot</strong>, enable the <strong>Message Content Intent</strong> on the
-          Bot page (required for @mentions), and put the bot token and application ID in{" "}
-          <code>.env</code>:
-        </p>
-        <pre class="muted" style="padding:0.6rem;border-radius:6px;overflow-x:auto">
-          {"DISCORD_BOT_TOKEN=...\nDISCORD_APPLICATION_ID=..."}
-        </pre>
-        <p class="muted">
-          Restart the bot after editing — this page will pick it up automatically.
-        </p>
-        {discordConnected ? <p>✅ Connected.</p> : <p class="muted">Not connected yet.</p>}
+        {discordConnected ? (
+          <p>✅ Connected.</p>
+        ) : (
+          <>
+            <p>
+              Not connected. Add both values to <code>.env</code> and restart:
+            </p>
+            <pre class="muted" style="padding:0.6rem;border-radius:6px;overflow-x:auto">
+              {"DISCORD_BOT_TOKEN=...\nDISCORD_APPLICATION_ID=..."}
+            </pre>
+            <p class="muted">
+              Enable the <strong>Message Content Intent</strong> too — without it the bot can't see
+              @mentions.
+            </p>
+            <p>
+              <a href={`${DOCS}/discord-app-setup/`} target="_blank" rel="noreferrer">
+                Set up the Discord app →
+              </a>
+            </p>
+          </>
+        )}
       </Card>
 
-      <Card title="2 · Claude subscriptions (one per user)">
+      <Card title="Claude subscriptions">
         <p class="muted">
-          claudecord has no shared, instance-wide Claude credential. Every Discord user brings their
-          own Claude Code subscription: once the bot is in a server, each user runs{" "}
-          <code>/link-claude link</code>, pastes a token from <code>claude setup-token</code> into
-          the modal that pops up, and every run they start from then on is billed to their own
-          subscription.
+          Each member links their own with <code>/link-claude link</code> in Discord, pasting a
+          token from <code>claude setup-token</code>.
         </p>
         {claudeIdentities.length > 0 ? (
           <div class="checkbox-list">
             {claudeIdentities.map((id) => (
               <div key={id.discordUserId} style="display:flex;gap:0.6rem;align-items:center">
                 <span>
-                  user {id.discordUserId}{" "}
+                  {who(id.discordUserId)}{" "}
                   <span class="muted">
                     ·{" "}
                     {id.lastVerifiedAt
@@ -165,25 +185,19 @@ export function Setup() {
             ))}
           </div>
         ) : (
-          <p class="muted">No one has linked a Claude subscription yet.</p>
+          <p class="muted">Nobody has linked a Claude subscription yet.</p>
         )}
-        <p class="muted">
-          Tokens are stored in <code>DATA_DIR/secrets.json</code> (chmod 600), never in the database
-          or logs.
-        </p>
       </Card>
 
-      <Card title="3 · Per-user GitHub access (optional)">
+      <Card title="2 · GitHub access (optional)">
         <p class="muted">
-          On a shared server, let each role-gated member connect their <strong>own</strong> GitHub
-          account. Agentic runs then clone, read, push and open pull requests using <code>git</code>
-          /<code>gh</code> in the acting user's namespace — never a shared token. Register a{" "}
+          Members connect their own GitHub account with <code>/link-github</code> in Discord. To
+          enable that, register a{" "}
           <a href="https://github.com/settings/apps/new" target="_blank" rel="noreferrer">
             GitHub App
           </a>{" "}
-          with <strong>Enable Device Flow</strong> checked, then paste its Client ID and a generated
-          Client secret here. Members run <code>/link-github</code> in Discord; set the allowed
-          roles per server under Access control.
+          with <strong>Enable Device Flow</strong> checked and paste its credentials here. Choose
+          who may use it under Access control.
         </p>
         <label class="field">
           <span>Client ID</span>
@@ -211,16 +225,21 @@ export function Setup() {
         </button>{" "}
         {appState === "done" ? "✅" : null}
         {appMessage ? <p class={appState === "error" ? "" : "muted"}>{appMessage}</p> : null}
+        <p>
+          <a href={`${DOCS}/github-integration/`} target="_blank" rel="noreferrer">
+            How per-user GitHub access works →
+          </a>
+        </p>
         {githubIdentities.length > 0 ? (
           <>
             <p class="muted" style="margin-top:1rem">
-              <strong>Linked accounts</strong>
+              <strong>Connected GitHub accounts</strong>
             </p>
             <div class="checkbox-list">
               {githubIdentities.map((id) => (
                 <div key={id.discordUserId} style="display:flex;gap:0.6rem;align-items:center">
                   <span>
-                    @{id.login ?? "unknown"} <span class="muted">· user {id.discordUserId}</span>
+                    @{id.login ?? "unknown"} <span class="muted">· {who(id.discordUserId)}</span>
                   </span>
                   <button type="button" onClick={() => void unlinkGithub(id.discordUserId)}>
                     Unlink
@@ -230,20 +249,14 @@ export function Setup() {
             </div>
           </>
         ) : (
-          <p class="muted">No accounts linked yet.</p>
+          <p class="muted">Nobody has connected a GitHub account yet.</p>
         )}
-        <p class="muted">
-          Tokens are stored in <code>DATA_DIR/secrets.json</code> (chmod 600), never in the database
-          or logs.
-        </p>
       </Card>
 
-      <Card title="4 · Invite & test">
+      <Card title="3 · Invite & test">
         {discordConnected && inviteUrl ? (
           <>
-            <p>
-              🎉 The bot is connected. Invite it to a server, then mention it in a text channel:
-            </p>
+            <p>Invite the bot to a server, then mention it in a text channel:</p>
             <p>
               <code>@YourBot hello there!</code>
             </p>
@@ -251,12 +264,12 @@ export function Setup() {
               Open invite link
             </a>
             <p class="muted" style="margin-top:0.8rem">
-              Each member will need to run <code>/link-claude link</code> before the bot will answer
+              Each member needs to run <code>/link-claude link</code> before the bot will answer
               them.
             </p>
           </>
         ) : (
-          <p class="muted">Complete step 1 above to get your invite link.</p>
+          <p class="muted">Complete step 1 to get your invite link.</p>
         )}
       </Card>
     </>

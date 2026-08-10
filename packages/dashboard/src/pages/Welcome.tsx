@@ -1,6 +1,7 @@
 import { useState } from "preact/hooks";
 import { api, type MeDto } from "../api.ts";
 import { Card } from "../components.tsx";
+import { GithubDeviceSteps } from "../GithubDeviceSteps.tsx";
 import { IdentityGraph } from "../IdentityGraph.tsx";
 import { useGithubDeviceFlow } from "../useGithubDeviceFlow.ts";
 
@@ -64,7 +65,9 @@ export function Welcome(props: { me: MeDto; onComplete: () => void }) {
             <>
               <h2 style="margin-top:0">Signed in as {me.user.globalName ?? me.user.username}</h2>
               {me.guilds.length > 0 ? (
-                <p class="muted">Shared with the bot: {me.guilds.map((g) => g.name).join(", ")}.</p>
+                <p class="muted">
+                  Servers you share with the bot: {me.guilds.map((g) => g.name).join(", ")}.
+                </p>
               ) : null}
               {/* Live status — the open branches double as the instructions. */}
               <IdentityGraph
@@ -83,8 +86,7 @@ export function Welcome(props: { me: MeDto; onComplete: () => void }) {
           {step === 2 ? (
             <>
               <p class="muted">
-                claudecord has no shared Claude credential — link your own subscription. On any
-                machine with Claude Code installed:
+                Link your own Claude subscription. On any machine with Claude Code installed:
               </p>
               <pre class="muted" style="padding:0.6rem;border-radius:6px;overflow-x:auto">
                 claude setup-token
@@ -118,7 +120,7 @@ export function Welcome(props: { me: MeDto; onComplete: () => void }) {
                 the server enables agentic mode.
               </p>
               <p class="muted">
-                You can also run <code>/link-github link</code> in Discord — same thing, either way.
+                You can also run <code>/link-github link</code> in Discord.
               </p>
               {github.state === "idle" || github.state === "error" ? (
                 <>
@@ -140,18 +142,10 @@ export function Welcome(props: { me: MeDto; onComplete: () => void }) {
               ) : null}
               {github.state === "starting" ? <p class="muted">Requesting a code…</p> : null}
               {github.state === "waiting" && github.device ? (
-                <>
-                  <p>
-                    1. Open{" "}
-                    <a href={github.device.verificationUri} target="_blank" rel="noreferrer">
-                      {github.device.verificationUri}
-                    </a>
-                  </p>
-                  <p>
-                    2. Enter this code: <code>{github.device.userCode}</code>
-                  </p>
-                  <p class="muted">Waiting for you to authorize…</p>
-                </>
+                <GithubDeviceSteps
+                  userCode={github.device.userCode}
+                  verificationUri={github.device.verificationUri}
+                />
               ) : null}
               {github.state === "authorized" ? (
                 <>

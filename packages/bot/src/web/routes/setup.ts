@@ -34,7 +34,7 @@ export function setupRoutes(app: Hono, ctx: AppContext): void {
     ctx.secrets.update({ githubAppClientId: clientId, githubAppClientSecret: clientSecret });
     return c.json<SetupResultDto>({
       ok: true,
-      message: "GitHub App saved. Role-gated users can now run /link-github to connect GitHub.",
+      message: "GitHub App saved. Members can now run /link-github to connect their account.",
     });
   });
 }

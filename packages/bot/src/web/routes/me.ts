@@ -176,7 +176,7 @@ export function meRoutes(app: Hono, ctx: AppContext): void {
         {
           ok: false,
           message:
-            "That looks like a plain Anthropic API key. claudecord runs on Claude Code subscriptions — get a token with `claude setup-token` instead.",
+            "That looks like an Anthropic API key, not a subscription token. Get one with `claude setup-token` instead.",
         },
         400,
       );

@@ -31,10 +31,7 @@ export function Sessions() {
     <>
       <h1>Sessions</h1>
       <Card>
-        <p class="muted">
-          Every Discord thread maps to one Claude session. Resetting deletes the mapping — the
-          thread keeps working but Claude forgets its history.
-        </p>
+        <p class="muted">Reset makes Claude forget a thread's history. The thread keeps working.</p>
         {!sessions ? (
           "Loading…"
         ) : sessions.length === 0 ? (

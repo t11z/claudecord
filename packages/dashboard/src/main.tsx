@@ -32,7 +32,7 @@ function useHashRoute(): string {
   return hash;
 }
 
-/** There is no password login anymore — the only door in is a `/dashboard` magic link. */
+/** Sign-in starts in Discord: `/dashboard` replies with a one-time link. */
 function SignedOut() {
   return (
     <div class="login-wrap">
