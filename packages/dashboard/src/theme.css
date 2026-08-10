@@ -85,6 +85,11 @@ code {
   min-height: 100vh;
 }
 
+/* Stays put while the main area scrolls, so Sign out and Docs sit at the bottom
+   of the *viewport* rather than the bottom of a column stretched to the content.
+   `align-self: flex-start` is what stops the flex parent stretching it; without
+   it the height below has no effect. `overflow-y` matters on a short window,
+   where the nav itself can be taller than the viewport — scroll it, don't clip. */
 .sidebar {
   width: 220px;
   flex-shrink: 0;
@@ -93,6 +98,15 @@ code {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  /* dvh, not vh: on mobile, vh includes the area behind the browser chrome, so
+     the bottom block would sit just out of reach. No vh fallback needed — this
+     stylesheet already relies on color-mix(), which needs newer browsers than
+     dvh does. */
+  height: 100dvh;
+  overflow-y: auto;
 }
 
 .sidebar .brand {

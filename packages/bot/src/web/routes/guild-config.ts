@@ -25,7 +25,6 @@ export function guildConfigRoutes(app: Hono, ctx: AppContext): void {
         allowedChannelIds: config.allowedChannelIds,
         allowedRoleIds: config.allowedRoleIds,
         agenticEnabled: config.agenticEnabled,
-        githubRoleIds: config.githubRoleIds,
         model: config.model,
         systemPromptExtra: config.systemPromptExtra,
       },
@@ -64,9 +63,10 @@ export function guildConfigRoutes(app: Hono, ctx: AppContext): void {
         : current.allowedRoleIds,
       agenticEnabled:
         typeof body.agenticEnabled === "boolean" ? body.agenticEnabled : current.agenticEnabled,
-      githubRoleIds: Array.isArray(body.githubRoleIds)
-        ? body.githubRoleIds.filter((v): v is string => typeof v === "string")
-        : current.githubRoleIds,
+      // Carried through untouched: the separate GitHub role gate is gone (GitHub
+      // follows the bot's allowed roles), but the column is still read once at
+      // startup to warn operators whose two lists used to differ.
+      githubRoleIds: current.githubRoleIds,
       model: body.model !== undefined ? body.model : current.model,
       systemPromptExtra:
         body.systemPromptExtra !== undefined ? body.systemPromptExtra : current.systemPromptExtra,

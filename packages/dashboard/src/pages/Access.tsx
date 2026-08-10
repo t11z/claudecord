@@ -118,7 +118,10 @@ export function Access() {
             </div>
           </Card>
           <Card title="Allowed roles">
-            <p class="muted">No selection = everyone may talk to the bot.</p>
+            <p class="muted">
+              No selection = everyone may talk to the bot. These roles also decide who may connect
+              their own GitHub account and have it used in their agentic runs.
+            </p>
             <div class="checkbox-list">
               {data.roles.map((r) => (
                 <label key={r.id}>
@@ -131,33 +134,6 @@ export function Access() {
                         config: {
                           ...data.config,
                           allowedRoleIds: toggle(data.config.allowedRoleIds, r.id),
-                        },
-                      })
-                    }
-                  />
-                  @{r.name}
-                </label>
-              ))}
-            </div>
-          </Card>
-          <Card title="GitHub roles">
-            <p class="muted">
-              Members with one of these roles can run <code>/link-github</code> to connect their own
-              GitHub account. No selection = anyone may connect one. Requires a GitHub App
-              configured under Setup.
-            </p>
-            <div class="checkbox-list">
-              {data.roles.map((r) => (
-                <label key={r.id}>
-                  <input
-                    type="checkbox"
-                    checked={data.config.githubRoleIds.includes(r.id)}
-                    onChange={() =>
-                      setData({
-                        ...data,
-                        config: {
-                          ...data.config,
-                          githubRoleIds: toggle(data.config.githubRoleIds, r.id),
                         },
                       })
                     }

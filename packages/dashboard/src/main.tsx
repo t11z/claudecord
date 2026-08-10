@@ -20,6 +20,8 @@ const ADMIN_ROUTES: { path: string; label: string; component: () => JSX.Element 
   { path: "#/identities", label: "Linked accounts", component: Identities },
   { path: "#/sessions", label: "Sessions", component: Sessions },
   { path: "#/usage", label: "Usage", component: Usage },
+  // An admin is a user too — this is where they link their own Claude/GitHub.
+  { path: "#/account", label: "Your account", component: OwnAccountPage },
 ];
 
 function useHashRoute(): string {
@@ -102,6 +104,31 @@ function MemberLayout(props: { user: AuthUserDto | null; children: JSX.Element }
       <main class="main">{props.children}</main>
     </div>
   );
+}
+
+/**
+ * `Account` needs `{me, onChange}`, but `ADMIN_ROUTES` components take no props
+ * — every admin page fetches its own data. This wrapper supplies them, so an
+ * admin reaches the same self-service page members get.
+ *
+ * Without it an admin has no way to link their own Claude subscription at all:
+ * `App` sends `isAdmin` straight to `AdminApp`, so `Account` was unreachable,
+ * and Setup's Claude card only ever *listed* identities.
+ */
+function OwnAccountPage() {
+  const [me, setMe] = useState<MeDto | null>(null);
+
+  const reload = () => {
+    api
+      .me()
+      .then(setMe)
+      .catch(() => {});
+  };
+
+  useEffect(reload, []);
+
+  if (!me) return <p class="muted">Loading…</p>;
+  return <Account me={me} onChange={reload} />;
 }
 
 function MemberApp(props: { user: AuthUserDto | null }) {

@@ -2,7 +2,7 @@ import { type ChatInputCommandInteraction, SlashCommandBuilder } from "discord.j
 import type { AppContext } from "../../context.js";
 import { DeviceFlowError, pollForToken, requestDeviceCode } from "../../github/device-flow.js";
 import { revokeUserToken } from "../../github/refresh.js";
-import { canUseGithub, isGithubGateActive } from "../access-control.js";
+import { mayUseBot } from "../access-control.js";
 import type { Command } from "./types.js";
 
 /** Role ids of the invoking member, handling both cached and raw API shapes. */
@@ -34,7 +34,7 @@ async function runLink(ctx: AppContext, interaction: ChatInputCommandInteraction
   }
 
   const config = ctx.repos.guildConfig.get(interaction.guildId);
-  if (isGithubGateActive(config) && !canUseGithub(config, memberRoleIds(interaction))) {
+  if (!mayUseBot(config, memberRoleIds(interaction))) {
     await interaction.reply({
       ephemeral: true,
       content: "You don't have a role that's allowed to link a GitHub account on this server.",

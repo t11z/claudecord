@@ -45,19 +45,12 @@ export function isAllowed(config: GuildConfig, q: AccessQuery): boolean {
   return true;
 }
 
-/**
- * Whether a per-user GitHub role gate is active for this guild — i.e. at least
- * one role must hold a linked GitHub identity to use it in agentic runs.
+/*
+ * There is deliberately no separate GitHub role gate. Whoever may talk to the
+ * bot may also connect their own GitHub account and have it used in their own
+ * agentic runs — one rule, `mayUseBot`, rather than two lists that in practice
+ * held identical values. The real control over GitHub is `agenticEnabled`,
+ * which is per-guild, off by default, and carries the warning that matters:
+ * a token is only ever used for its owner's own runs, so linking is a decision
+ * about oneself.
  */
-export function isGithubGateActive(config: GuildConfig): boolean {
-  return config.githubRoleIds.length > 0;
-}
-
-/**
- * Whether a member is permitted to use their own GitHub identity in agentic
- * runs. With no gate configured, everyone is (subject to actually having linked).
- */
-export function canUseGithub(config: GuildConfig, memberRoleIds: string[]): boolean {
-  if (!isGithubGateActive(config)) return true;
-  return memberRoleIds.some((r) => config.githubRoleIds.includes(r));
-}

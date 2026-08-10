@@ -1,7 +1,7 @@
 import type { Hono } from "hono";
 import { checkClaudeAuth } from "../../claude/auth-check.js";
 import type { AppContext } from "../../context.js";
-import { canUseGithub } from "../../discord/access-control.js";
+import { mayUseBot } from "../../discord/access-control.js";
 import {
   DeviceFlowError,
   exchangeDeviceCode,
@@ -47,7 +47,7 @@ export async function mutualGuilds(ctx: AppContext, userId: string): Promise<MeG
         id: guild.id,
         name: guild.name,
         iconUrl: guild.iconURL({ size: 64 }),
-        githubAllowed: canUseGithub(config, [...member.roles.cache.keys()]),
+        githubAllowed: mayUseBot(config, [...member.roles.cache.keys()]),
       });
     } catch {
       // Not a member of this guild, or Discord didn't answer — skip, not an error.

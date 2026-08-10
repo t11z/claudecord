@@ -14,10 +14,10 @@ who holds **Manage Guild** on that specific server (sign in with
 - **Channels** — empty list = the bot answers everywhere it can read.
   Threads inherit their parent channel's status.
 - **Roles** — empty list = everyone may talk to the bot. Otherwise a user
-  needs at least one allowlisted role.
-- **GitHub roles** — which roles may link and use their **own** GitHub account
-  in agentic runs (see [GitHub integration](/claudecord/guide/github-integration/)).
-  Empty = anyone may link.
+  needs at least one allowlisted role. The same roles decide who may sign in to
+  the dashboard and who may connect their own GitHub account
+  (see [GitHub integration](/claudecord/guide/github-integration/)) — one list,
+  not three.
 - **Enabled** — a master switch per server.
 
 Every message to the bot consumes the *sending user's own* Claude subscription
@@ -74,5 +74,5 @@ Agentic mode is also the prerequisite for the optional
 [GitHub integration](/claudecord/guide/github-integration/): once configured
 by an operator (a GitHub App, no shared token), each member runs
 `/link-github` to connect their own account, and their agentic runs then
-clone, push and open pull requests as *them*. Gate who may link with
-*GitHub roles*, and read that page's security note before enabling it.
+clone, push and open pull requests as *them*. Read that page's security note
+before enabling it.

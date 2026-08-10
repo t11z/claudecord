@@ -10,6 +10,11 @@ export interface GuildConfig {
    * Roles allowed to link & use their own GitHub identity in agentic runs.
    * Empty = no per-user gate (the shared GITHUB_TOKEN behaviour, if configured).
    */
+  /**
+   * Vestigial: GitHub now follows `allowedRoleIds`, so nothing reads this to
+   * make a decision. Kept for one release so startup can warn operators whose
+   * two lists differed, then removable along with the column.
+   */
   githubRoleIds: string[];
   model: string | null;
   systemPromptExtra: string | null;
@@ -66,6 +71,12 @@ export class GuildConfigRepo {
       | Row
       | undefined;
     return row ? toConfig(row) : { guildId, ...DEFAULT_GUILD_CONFIG };
+  }
+
+  /** Every stored config. Guilds that never had one edited simply aren't here. */
+  list(): GuildConfig[] {
+    const rows = this.db.prepare("SELECT * FROM guild_config").all() as Row[];
+    return rows.map(toConfig);
   }
 
   upsert(config: GuildConfig): void {

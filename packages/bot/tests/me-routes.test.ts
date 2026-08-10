@@ -183,6 +183,60 @@ describe("/api/me/* requires a session", () => {
   });
 });
 
+/**
+ * An admin session for `sub`. `cookieFor` above always yields a NON-admin
+ * (it mints `hasManageGuild: false`, which `decideIsAdmin` turns into
+ * `isAdmin: false`), so every other test in this file runs as a member — which
+ * is exactly why nothing caught that admins had no way to reach these routes.
+ */
+async function adminCookieFor(ctx: AppContext, sub: string): Promise<string> {
+  const mini = new (await import("hono")).Hono();
+  mini.get("/set", (c) => {
+    ctx.auth.issueCookie(c, { sub, isAdmin: true });
+    return c.text("ok");
+  });
+  const raw = (await mini.request("/set")).headers.get("set-cookie");
+  if (!raw) throw new Error("no set-cookie header");
+  return raw.split(";")[0]!;
+}
+
+describe("/api/me/* is reachable by an ADMIN session, not just a member", () => {
+  it("lets an admin link their own Claude subscription", async () => {
+    // The dashboard's "Your account" page for admins stands on this: requireUser
+    // admits any signed-in user, admin included. Nothing pinned that before.
+    const { ctx, app } = makeApp();
+    const cookie = await adminCookieFor(ctx, "admin1");
+    claudeOk();
+
+    const res = await app.request("/api/me/claude", {
+      method: "POST",
+      headers: { Cookie: cookie, "Content-Type": "application/json" },
+      body: JSON.stringify({ token: "sk-ant-oat01-real" }),
+    });
+    expect(res.status).toBe(200);
+    expect(ctx.claude.getToken("admin1")).toBe("sk-ant-oat01-real");
+
+    // …and it is the admin's own identity, visible on their own /api/me.
+    const me = await bodyOf(await app.request("/api/me", { headers: { Cookie: cookie } }));
+    expect(me.claude.linked).toBe(true);
+    expect(me.user.id).toBe("admin1");
+  });
+
+  it("lets an admin read and unlink their own identity", async () => {
+    const { ctx, app } = makeApp();
+    const cookie = await adminCookieFor(ctx, "admin1");
+    ctx.claude.link("admin1", "sk-ant-oat01-x");
+
+    expect((await app.request("/api/me", { headers: { Cookie: cookie } })).status).toBe(200);
+    const res = await app.request("/api/me/claude", {
+      method: "DELETE",
+      headers: { Cookie: cookie },
+    });
+    expect(res.status).toBe(200);
+    expect(ctx.claude.get("admin1")).toBeUndefined();
+  });
+});
+
 describe("GET /api/me", () => {
   it("starts incomplete, with claude unlinked and github unlinked/unskipped", async () => {
     const { ctx, app } = makeApp();
@@ -217,7 +271,7 @@ describe("GET /api/me", () => {
     ctx.repos.guildConfig.upsert({
       ...ctx.repos.guildConfig.get("g1"),
       guildId: "g1",
-      githubRoleIds: ["gh-allowed"],
+      allowedRoleIds: ["gh-allowed"],
     });
     const cookie = await cookieFor(ctx, app, "u1");
     const denied = await bodyOf(await app.request("/api/me", { headers: { Cookie: cookie } }));
@@ -457,7 +511,7 @@ describe("GitHub device flow via /api/me/github/device*", () => {
     ctx.repos.guildConfig.upsert({
       ...ctx.repos.guildConfig.get("g1"),
       guildId: "g1",
-      githubRoleIds: ["gh-allowed"],
+      allowedRoleIds: ["gh-allowed"],
     });
     const cookie = await cookieFor(ctx, app, "u1");
     const res = await app.request("/api/me/github/device", {
@@ -475,7 +529,7 @@ describe("GitHub device flow via /api/me/github/device*", () => {
     ctx.repos.guildConfig.upsert({
       ...ctx.repos.guildConfig.get("g-good"),
       guildId: "g-good",
-      githubRoleIds: ["gh-allowed"],
+      allowedRoleIds: ["gh-allowed"],
     });
     const cookie = await cookieFor(ctx, app, "u1");
     vi.stubGlobal(
@@ -508,7 +562,7 @@ describe("GitHub device flow via /api/me/github/device*", () => {
     ctx.repos.guildConfig.upsert({
       ...ctx.repos.guildConfig.get("g1"),
       guildId: "g1",
-      githubRoleIds: ["gh-allowed"],
+      allowedRoleIds: ["gh-allowed"],
     });
     const cookie = await cookieFor(ctx, app, "u1");
     vi.stubGlobal(
@@ -540,7 +594,7 @@ describe("GitHub device flow via /api/me/github/device*", () => {
     ctx.repos.guildConfig.upsert({
       ...ctx.repos.guildConfig.get("g1"),
       guildId: "g1",
-      githubRoleIds: ["gh-allowed"],
+      allowedRoleIds: ["gh-allowed"],
     });
     const cookie = await cookieFor(ctx, app, "u1");
     vi.stubGlobal(
@@ -596,7 +650,7 @@ describe("GitHub device flow via /api/me/github/device*", () => {
     ctx.repos.guildConfig.upsert({
       ...ctx.repos.guildConfig.get("g1"),
       guildId: "g1",
-      githubRoleIds: ["gh-allowed"],
+      allowedRoleIds: ["gh-allowed"],
     });
     const cookie = await cookieFor(ctx, app, "u1");
     const res = await app.request("/api/me/github", {

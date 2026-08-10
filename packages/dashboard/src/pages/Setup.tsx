@@ -220,8 +220,9 @@ export function Setup() {
 
       <Card title="Claude subscriptions">
         <p class="muted">
-          Each member links their own with <code>/link-claude link</code> in Discord, pasting a
-          token from <code>claude setup-token</code>.
+          Everyone links their own — on <a href="#/account">Your account</a>, or with{" "}
+          <code>/link-claude link</code> in Discord. Both take a token from{" "}
+          <code>claude setup-token</code>.
         </p>
         {claudeIdentities.length > 0 ? (
           <div class="checkbox-list">

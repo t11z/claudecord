@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { GuildConfig } from "../src/db/repos/guild-config.js";
-import { canUseGithub, isAllowed, isGithubGateActive } from "../src/discord/access-control.js";
+import { isAllowed, mayUseBot } from "../src/discord/access-control.js";
 
 function config(overrides: Partial<GuildConfig> = {}): GuildConfig {
   return {
@@ -80,20 +80,35 @@ describe("isAllowed", () => {
   });
 });
 
-describe("GitHub role gate", () => {
-  it("is inactive with no github roles, active otherwise", () => {
-    expect(isGithubGateActive(config())).toBe(false);
-    expect(isGithubGateActive(config({ githubRoleIds: ["g"] }))).toBe(true);
+/**
+ * `mayUseBot` is the single access rule: it decides talking to the bot, signing
+ * in to the dashboard, and connecting a GitHub account. There is no separate
+ * GitHub role list any more, so there is nothing here that can drift out of
+ * step with `isAllowed` — which delegates to this.
+ */
+describe("mayUseBot", () => {
+  it("refuses when the bot is disabled for the guild, whatever the roles", () => {
+    expect(mayUseBot(config({ enabled: false }), ["anything"])).toBe(false);
   });
 
-  it("permits everyone when no gate is set", () => {
-    expect(canUseGithub(config(), [])).toBe(true);
+  it("permits everyone when no role allowlist is set", () => {
+    expect(mayUseBot(config(), [])).toBe(true);
   });
 
-  it("permits only members holding a github role when gated", () => {
-    const cfg = config({ githubRoleIds: ["gh"] });
-    expect(canUseGithub(cfg, ["gh"])).toBe(true);
-    expect(canUseGithub(cfg, ["other"])).toBe(false);
-    expect(canUseGithub(cfg, [])).toBe(false);
+  it("permits only members holding an allowed role when one is set", () => {
+    const cfg = config({ allowedRoleIds: ["team"] });
+    expect(mayUseBot(cfg, ["team"])).toBe(true);
+    expect(mayUseBot(cfg, ["other"])).toBe(false);
+    expect(mayUseBot(cfg, [])).toBe(false);
+  });
+
+  it("is the rule isAllowed uses — a role that fails here fails there too", () => {
+    const cfg = config({ allowedRoleIds: ["team"] });
+    expect(
+      isAllowed(cfg, { channelId: "c1", parentChannelId: null, memberRoleIds: ["other"] }),
+    ).toBe(false);
+    expect(
+      isAllowed(cfg, { channelId: "c1", parentChannelId: null, memberRoleIds: ["team"] }),
+    ).toBe(true);
   });
 });

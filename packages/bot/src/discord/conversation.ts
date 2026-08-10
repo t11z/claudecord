@@ -10,7 +10,7 @@ import { CLAUDE_LINK_REQUIRED } from "../claude/identity-store.js";
 import type { AppContext } from "../context.js";
 import type { GuildConfig } from "../db/repos/guild-config.js";
 import type { ThreadSession } from "../db/repos/sessions.js";
-import { canUseGithub } from "./access-control.js";
+import { mayUseBot } from "./access-control.js";
 import { buildPrompt } from "./attachments.js";
 import { StreamingReply, TypingIndicator } from "./progress.js";
 import { DISCORD_MESSAGE_LIMIT, splitMessage } from "./splitter.js";
@@ -28,7 +28,7 @@ async function resolveTurnGithubToken(
   message: Message,
 ): Promise<string | undefined> {
   const memberRoleIds = [...(message.member?.roles.cache.keys() ?? [])];
-  if (!canUseGithub(config, memberRoleIds)) return undefined;
+  if (!mayUseBot(config, memberRoleIds)) return undefined;
   return (await ctx.github.getFreshToken(message.author.id)) ?? undefined;
 }
 

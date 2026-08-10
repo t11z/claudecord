@@ -45,9 +45,9 @@ public callback URL (the dashboard normally binds to localhost).
 3. Add them in the dashboard (Setup → *Per-user GitHub access*) or via
    `GITHUB_APP_CLIENT_ID` / `GITHUB_APP_CLIENT_SECRET` (env wins). Secrets
    live in `DATA_DIR/secrets.json` (mode `600`), never in SQLite or logs.
-4. Optionally gate who may link, per server: dashboard → Access control →
-   *GitHub roles*, or `/config allow-github-role @role`. Empty = everyone may
-   link.
+4. Who may connect an account follows *Allowed roles* under Access control —
+   whoever may talk to the bot may also connect their own GitHub. There is no
+   separate GitHub role list.
 
 ## Linking (each user)
 
@@ -57,14 +57,10 @@ message updates to confirm. `/link-github status` shows your link and
 `/link-github unlink` disconnects it (revoking the token best-effort).
 
 The dashboard offers the same thing (Your account → *GitHub account*) — same
-Device Flow, same result, and since 1.4.0 the same **role gate**: if
-`allow-github-role` is set and you don't hold one of those roles, both paths
-refuse. Before 1.4.0 the browser path skipped that check, so it could store a
-link the Discord command would have declined. (The token was still unusable on
-a server where the role was missing — that is re-checked on every run — but the
-link shouldn't have been created.) Either path also tells you *why* it can't
-link, rather than failing on the attempt: no GitHub App configured, no shared
-server, or no permitting role.
+Device Flow, same result, same rule: you need a server you share with the bot
+where your roles allow you to use it. Either path tells you *why* it can't link
+rather than failing on the attempt: no GitHub App configured, no shared server,
+or no permitting role.
 
 For each agentic message, the **message author's own** token is used — never
 anyone else's, and never a shared fallback, because there isn't one. A member

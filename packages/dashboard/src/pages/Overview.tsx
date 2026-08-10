@@ -48,7 +48,12 @@ export function Overview() {
               {status.claudeIdentityCount} user{status.claudeIdentityCount === 1 ? "" : "s"} linked
             </Badge>
           ) : (
-            <Badge kind="warn">nobody has linked yet</Badge>
+            <>
+              <Badge kind="warn">nobody has linked yet</Badge>{" "}
+              <span class="muted">
+                — link yours on <a href="#/account">Your account</a>.
+              </span>
+            </>
           )}
         </p>
         <p class="muted">

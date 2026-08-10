@@ -79,4 +79,6 @@ export class ClaudeIdentityStore {
 }
 
 export const CLAUDE_LINK_REQUIRED =
-  "🔑 You haven't connected a Claude subscription yet. Run `/link-claude link` — you'll need a token from `claude setup-token`.";
+  "🔑 You haven't connected a Claude subscription yet. Run `/link-claude link`, or open the " +
+  "dashboard with `/dashboard` and go to *Your account*. Either way you'll need a token from " +
+  "`claude setup-token`.";

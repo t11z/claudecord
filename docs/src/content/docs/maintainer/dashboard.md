@@ -184,10 +184,19 @@ Deliberately boring:
 session), `MemberApp` (session, not admin), or `AdminApp` (session, admin).
 `MemberApp` further branches on `GET /api/me`'s `onboardingComplete`:
 `Welcome.tsx` (the three-step wizard) while incomplete, `Account.tsx`
-(self-service link status + usage) once done. `AdminApp` first checks
+(self-service link status + usage) once done.
+
+`Account.tsx` is **also** reachable for admins, via the `Your account` route —
+`OwnAccountPage` in `main.tsx` supplies the `me`/`onChange` props that
+`ADMIN_ROUTES`'s prop-less component type can't. Without it an admin had no way
+to link their own Claude subscription at all: `App` sends `isAdmin` straight to
+`AdminApp`, and Setup's Claude card only ever *lists* identities. An admin is a
+user too.
+
+`AdminApp` first checks
 `GET /api/migrate/status`: while `needed` is true it renders `Migrate.tsx`
 (the upgrade wizard, see `guide/migration.md`) instead of the normal
-six-page router (Overview/Setup/Access/Linked accounts/Sessions/Usage) — this only ever
+seven-page router (Overview/Setup/Access/Linked accounts/Sessions/Usage/Your account) — this only ever
 fires for an install with prior state from before per-user accounts existed.
 
 The trigger logic itself (`hasPriorState`, `stampFreshInstall`) lives in

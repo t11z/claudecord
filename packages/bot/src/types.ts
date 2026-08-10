@@ -49,7 +49,6 @@ export interface GuildConfigDto {
   allowedChannelIds: string[];
   allowedRoleIds: string[];
   agenticEnabled: boolean;
-  githubRoleIds: string[];
   model: string | null;
   systemPromptExtra: string | null;
 }
