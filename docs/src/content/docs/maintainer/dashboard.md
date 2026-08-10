@@ -49,6 +49,30 @@ user-facing story. The implementation, module by module:
   fetch it — the real fix is that GET no longer writes anything. A bare
   `HEAD` needs no separate handling either: Hono re-dispatches `HEAD` as
   `GET` internally, so it's automatically harmless once GET is.
+- `web/discord-oauth.ts` + the two `/api/auth/discord/*` routes — the second
+  way in, for anyone without a Discord client at hand. Same session cookie, same
+  `decideIsAdmin`. Three things worth knowing before touching it:
+  - **It ends on a page, not a redirect.** The cookie is `SameSite=Strict` and
+    the callback arrives as a cross-site navigation from discord.com, so a `303`
+    to `/` risks the browser withholding the new cookie on that follow-up.
+    `signedInPage()` navigates from our own origin instead, which keeps Strict
+    intact for the magic-link path too. `app.request()` cannot reproduce this —
+    it needs a real browser.
+  - **Authority never comes from the user.** Discord's token says *who*;
+    `resolveLogin` answers *what they may do* from the bot's own connection
+    (`mayUseBot` per guild, Manage Guild via `member.permissions`), so scope
+    stays `identify` and `hasManageGuild` is evidence rather than a claim. It is
+    only counted in guilds that also admit the user — otherwise this door would
+    be wider than `/dashboard`, which only ever checked the one guild it was
+    typed in.
+  - **It hides itself when unusable.** No client secret or no
+    `DASHBOARD_PUBLIC_URL` ⇒ the routes 503 and the button isn't rendered. The
+    redirect URL the operator must register is reported by `/api/status` as
+    `discordRedirectUri`, computed from `publicUrl()` — not from the browser's
+    origin, which differs behind a proxy.
+- `web/magic-link.ts` (`MagicLinkIssuer<C>`) — generic over its claims, so the
+  OAuth `state` reuses the same HMAC, single-use nonce set and TTL. A separate
+  instance keeps a state token from ever being consumed as a magic link.
 - `web/auth.ts` (`DashboardAuth`) — signs/verifies the session cookie
   (`{sub, isAdmin, exp}`), HMAC over `app_config`'s
   `dashboard_cookie_secret`, HttpOnly + `Secure` (when `DASHBOARD_PUBLIC_URL`
@@ -92,7 +116,9 @@ Unauthenticated:
 | --- | --- |
 | `GET /api/auth/link` | render the auto-submitting interstitial — verifies the token, never spends it |
 | `POST /api/auth/link` | spend the token, issue the session cookie, 303 to `/` |
-| `GET /api/auth/session` | current session's user + role, or `{user: null}` |
+| `GET /api/auth/discord/start` | redirect into Discord's OAuth consent (503 unless a client secret and `DASHBOARD_PUBLIC_URL` are both set) |
+| `GET /api/auth/discord/callback` | exchange the code, resolve authority server-side, issue the session cookie |
+| `GET /api/auth/session` | current session's user + role, plus `discordOAuthConfigured` — the only unauthenticated route, so the signed-out screen reads it from here rather than the admin-gated `/api/status` |
 | `POST /api/auth/logout` | clear the session cookie |
 
 Self-scoped (behind `requireUser()` — always the caller's own `sub`, never a path/body id):
@@ -118,6 +144,7 @@ Admin-only (behind `requireAdmin()`):
 | --- | --- |
 | `GET /api/status` | connection state, linked-identity counts, queue, invite URL |
 | `POST /api/setup/github-app` | store/clear the GitHub App used for `/link-github` |
+| `POST /api/setup/discord-oauth` | store/clear the client secret enabling browser sign-in |
 | `GET /api/guilds` | the full guild list, instance-wide |
 | `GET /api/github/identities`, `DELETE /api/github/identities/:id` | per-user GitHub links |
 | `GET /api/claude/identities`, `DELETE .../:id`, `POST .../:id/check` | per-user Claude links |

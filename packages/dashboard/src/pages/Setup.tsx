@@ -23,6 +23,30 @@ export function Setup() {
   /** Discord id → display name, so these lists don't show raw snowflakes. */
   const [names, setNames] = useState<Record<string, string>>({});
 
+  const [oauthConfigured, setOauthConfigured] = useState(false);
+  const [discordSecret, setDiscordSecret] = useState("");
+  const [discordState, setDiscordState] = useState<StepState>("pending");
+  const [discordMessage, setDiscordMessage] = useState<string | null>(null);
+  // Comes from the server, not from window.location: behind a proxy the two can
+  // differ, and Discord matches the redirect URL the *server* sends. Registering
+  // the browser's guess instead would fail on discord.com, out of our sight.
+  const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
+
+  const submitDiscordOAuth = async () => {
+    setDiscordState("busy");
+    setDiscordMessage(null);
+    try {
+      const result = await api.setupDiscordOAuth(discordSecret);
+      setDiscordState(result.ok ? "done" : "error");
+      setDiscordMessage(result.message);
+      setDiscordSecret("");
+      if (result.ok) setOauthConfigured(discordSecret.trim().length > 0);
+    } catch (err) {
+      setDiscordState("error");
+      setDiscordMessage(err instanceof Error ? err.message : String(err));
+    }
+  };
+
   const loadGithubIdentities = () => {
     api
       .githubIdentities()
@@ -46,6 +70,8 @@ export function Setup() {
       .then((s) => {
         setDiscordConnected(s.discordConnected);
         setInviteUrl(s.inviteUrl);
+        setOauthConfigured(s.discordOAuthConfigured);
+        setRedirectUrl(s.discordRedirectUri);
       })
       .catch(() => {});
     loadGithubIdentities();
@@ -148,6 +174,48 @@ export function Setup() {
             </p>
           </>
         )}
+      </Card>
+
+      <Card title="Browser sign-in (optional)">
+        {oauthConfigured ? (
+          <p>✅ The sign-in page offers a Discord button.</p>
+        ) : (
+          <>
+            <p class="muted">
+              Let people sign in from the browser instead of running <code>/dashboard</code> in
+              Discord. Paste the client secret of the <strong>same</strong> Discord application as
+              the bot, and add this redirect URL to it:
+            </p>
+            {redirectUrl ? (
+              <pre class="muted" style="padding:0.6rem;border-radius:6px;overflow-x:auto">
+                {redirectUrl}
+              </pre>
+            ) : (
+              <p class="muted">
+                Set <code>DASHBOARD_PUBLIC_URL</code> first — without it there is no address for
+                Discord to send people back to.
+              </p>
+            )}
+          </>
+        )}
+        <label class="field">
+          <span>Client secret</span>
+          <input
+            type="password"
+            value={discordSecret}
+            onInput={(e) => setDiscordSecret((e.target as HTMLInputElement).value)}
+          />
+        </label>
+        <button
+          type="button"
+          disabled={discordState === "busy"}
+          onClick={() => void submitDiscordOAuth()}
+        >
+          {discordState === "busy" ? "Saving…" : oauthConfigured ? "Replace secret" : "Save"}
+        </button>
+        {discordMessage ? (
+          <p class={discordState === "error" ? "" : "muted"}>{discordMessage}</p>
+        ) : null}
       </Card>
 
       <Card title="Claude subscriptions">

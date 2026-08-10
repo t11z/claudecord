@@ -4,6 +4,11 @@
  * so `/dashboard` mints a signed, single-use, short-lived link instead of the
  * project asking for a password anywhere. See `discord/commands/dashboard.ts`
  * (mint) and `web/routes/auth.ts` (consume).
+ *
+ * The issuer is generic over its claims because the Discord OAuth login needs
+ * exactly the same guarantees for its `state` parameter — signed, single-use,
+ * short-lived — but knows nothing about the user at the moment it mints one.
+ * Same crypto, same nonce set, different payload.
  */
 import crypto from "node:crypto";
 
@@ -17,7 +22,8 @@ export interface MagicLinkClaims {
   hasManageGuild: boolean;
 }
 
-interface TokenPayload extends MagicLinkClaims {
+/** What every token carries on the wire regardless of its claims. */
+interface Envelope {
   exp: number;
   nonce: string;
 }
@@ -28,10 +34,10 @@ function hmac(secret: string, payload: string): string {
   return crypto.createHmac("sha256", secret).update(payload).digest("base64url");
 }
 
-/** Strips the wire-only fields, leaving exactly the Discord-verified claims. */
-function toClaims(payload: TokenPayload): MagicLinkClaims {
+/** Strips the wire-only fields, leaving exactly the caller's claims. */
+function toClaims<C>(payload: C & Envelope): C {
   const { exp: _exp, nonce: _nonce, ...claims } = payload;
-  return claims;
+  return claims as unknown as C;
 }
 
 /**
@@ -39,7 +45,7 @@ function toClaims(payload: TokenPayload): MagicLinkClaims {
  * nonce set — a restart dropping pending (unredeemed) links is harmless at a
  * 5-minute TTL, and it avoids persisting single-use tokens anywhere.
  */
-export class MagicLinkIssuer {
+export class MagicLinkIssuer<C = MagicLinkClaims> {
   private readonly usedNonces = new Map<string, number>(); // nonce -> expiry, for pruning
 
   constructor(
@@ -47,9 +53,9 @@ export class MagicLinkIssuer {
     private readonly now: () => number = Date.now,
   ) {}
 
-  mint(claims: MagicLinkClaims): string {
+  mint(claims: C): string {
     this.prune();
-    const payload: TokenPayload = {
+    const payload: C & Envelope = {
       ...claims,
       exp: this.now() + TTL_MS,
       nonce: crypto.randomBytes(16).toString("base64url"),
@@ -65,13 +71,13 @@ export class MagicLinkIssuer {
    * without burning the single use — see `web/routes/auth.ts` for why a GET
    * must never consume.
    */
-  peek(token: string): MagicLinkClaims | null {
+  peek(token: string): C | null {
     const payload = this.parse(token);
     return payload ? toClaims(payload) : null;
   }
 
   /** Verifies, single-use-checks and consumes a token. Returns null if invalid, expired, tampered or already used. */
-  consume(token: string): MagicLinkClaims | null {
+  consume(token: string): C | null {
     const payload = this.parse(token);
     if (!payload) return null;
     this.usedNonces.set(payload.nonce, payload.exp);
@@ -85,7 +91,7 @@ export class MagicLinkIssuer {
    * always did; `prune` only drops nonces whose token has expired anyway, so
    * running it from this read path changes nothing observable.
    */
-  private parse(token: string): TokenPayload | null {
+  private parse(token: string): (C & Envelope) | null {
     this.prune();
     const dot = token.lastIndexOf(".");
     if (dot <= 0) return null;
@@ -99,7 +105,7 @@ export class MagicLinkIssuer {
       return null;
     }
 
-    let payload: TokenPayload;
+    let payload: C & Envelope;
     try {
       payload = JSON.parse(Buffer.from(encoded, "base64url").toString("utf8"));
     } catch {

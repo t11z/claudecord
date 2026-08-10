@@ -172,6 +172,7 @@ describe("POST /api/auth/link (redeem)", () => {
     expect(await sessionRes.json()).toEqual({
       user: { id: "u1", username: "alice", globalName: "Alice", avatarUrl: null },
       isAdmin: false,
+      discordOAuthConfigured: false,
     });
   });
 

@@ -105,6 +105,14 @@ describe("route gating: /api/auth/* is intentionally exempt", () => {
     expect((await app.request("/api/auth/logout", { method: "POST" })).status).toBe(200);
   });
 
+  it("the Discord sign-in routes are reachable with no session", async () => {
+    // They exist precisely for people who have no session yet; a 401 here would
+    // mean they were registered after the blanket admin gate in server.ts.
+    const { app } = makeApp();
+    expect((await app.request("/api/auth/discord/start")).status).toBe(503);
+    expect((await app.request("/api/auth/discord/callback")).status).toBe(503);
+  });
+
   it("both link routes reach their handler with no session — 400, not 401", async () => {
     // Regression guard for the registration-order trap: authRoutes() must
     // stay registered *before* `app.use("/api/*", requireAdmin(...))` in

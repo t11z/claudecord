@@ -32,8 +32,8 @@ function useHashRoute(): string {
   return hash;
 }
 
-/** Sign-in starts in Discord: `/dashboard` replies with a one-time link. */
-function SignedOut() {
+/** Two ways in: a one-time link from `/dashboard`, or Discord in the browser. */
+function SignedOut(props: { discordOAuth: boolean }) {
   return (
     <div class="login-wrap">
       <div class="login-card">
@@ -42,10 +42,25 @@ function SignedOut() {
             <div class="brand-mark">C</div>
             <strong>claudecord</strong>
           </div>
-          <p>
-            Run <code>/dashboard</code> in a Discord server the bot is in — it'll reply with a
-            one-time sign-in link.
-          </p>
+          {props.discordOAuth ? (
+            <>
+              {/* A plain link, not a fetch: the browser has to follow the
+                  redirect to discord.com itself. */}
+              <p>
+                <a class="button" href="/api/auth/discord/start">
+                  Sign in with Discord
+                </a>
+              </p>
+              <p class="muted">
+                Or run <code>/dashboard</code> in a server the bot is in for a one-time link.
+              </p>
+            </>
+          ) : (
+            <p>
+              Run <code>/dashboard</code> in a Discord server the bot is in — it'll reply with a
+              one-time sign-in link.
+            </p>
+          )}
         </Card>
       </div>
     </div>
@@ -176,19 +191,21 @@ function App() {
     "loading",
   );
   const [user, setUser] = useState<AuthUserDto | null>(null);
+  const [discordOAuth, setDiscordOAuth] = useState(false);
 
   useEffect(() => {
     api
       .session()
       .then((s) => {
         setUser(s.user);
+        setDiscordOAuth(s.discordOAuthConfigured);
         setAuthState(s.user === null ? "signed-out" : s.isAdmin ? "admin" : "user");
       })
       .catch(() => setAuthState("signed-out"));
   }, []);
 
   if (authState === "loading") return <div class="login-wrap">Loading…</div>;
-  if (authState === "signed-out") return <SignedOut />;
+  if (authState === "signed-out") return <SignedOut discordOAuth={discordOAuth} />;
   if (authState === "user") return <MemberApp user={user} />;
   return <AdminApp user={user} hash={hash} />;
 }

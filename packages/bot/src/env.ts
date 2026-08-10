@@ -10,6 +10,13 @@ const envSchema = z.object({
    */
   GITHUB_APP_CLIENT_ID: z.string().min(1).optional(),
   GITHUB_APP_CLIENT_SECRET: z.string().min(1).optional(),
+  /**
+   * Client secret of the same Discord application as the bot, enabling
+   * "Sign in with Discord" on the dashboard. Without it that button is not
+   * offered and `/dashboard` remains the only way in. Env wins over
+   * secrets.json, same as the GitHub App pair.
+   */
+  DISCORD_CLIENT_SECRET: z.string().min(1).optional(),
   DASHBOARD_HOST: z.string().default("127.0.0.1"),
   DASHBOARD_PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   /**

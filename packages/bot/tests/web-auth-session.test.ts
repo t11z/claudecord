@@ -114,6 +114,19 @@ describe("session cookie Secure flag", () => {
     expect(attrs(await app.request("/set"))).toContain("Secure");
   });
 
+  it("is SameSite=Strict — the OAuth callback depends on it staying so", async () => {
+    // The Discord callback ends on a same-site page rather than redirecting,
+    // precisely because this is Strict. If it were ever relaxed to Lax that hop
+    // would become unnecessary — and if this flips silently, nobody would know.
+    const auth = makeAuth();
+    const app = new Hono();
+    app.get("/set", (c) => {
+      auth.issueCookie(c, { sub: "u1", isAdmin: false });
+      return c.text("ok");
+    });
+    expect(attrs(await app.request("/set"))).toContain("SameSite=Strict");
+  });
+
   it("omits Secure by default", async () => {
     const auth = makeAuth();
     const app = new Hono();

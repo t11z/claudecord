@@ -15,6 +15,7 @@ export function createLogger(level: string): Logger {
         "GITHUB_TOKEN",
         "GH_TOKEN",
         "GITHUB_APP_CLIENT_SECRET",
+        "DISCORD_CLIENT_SECRET",
         "accessToken",
         "refreshToken",
         "oauthToken",

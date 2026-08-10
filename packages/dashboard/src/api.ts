@@ -86,6 +86,8 @@ export const api = {
   abortSession: (threadId: string) =>
     request<{ ok: boolean }>("POST", `/api/sessions/${threadId}/abort`),
   stats: (windowDays: number) => request<StatsDto>("GET", `/api/stats?window=${windowDays}`),
+  setupDiscordOAuth: (clientSecret: string) =>
+    request<SetupResultDto>("POST", "/api/setup/discord-oauth", { clientSecret }),
   setupGithubApp: (clientId: string, clientSecret: string) =>
     request<SetupResultDto>("POST", "/api/setup/github-app", { clientId, clientSecret }),
   githubIdentities: () => request<GithubIdentitiesResponseDto>("GET", "/api/github/identities"),

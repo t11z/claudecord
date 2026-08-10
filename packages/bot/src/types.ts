@@ -15,6 +15,20 @@ export interface StatusDto {
   claudeIdentityCount: number;
   /** Whether a GitHub App (client id + secret) is configured for /link-github. */
   githubAppConfigured: boolean;
+  /**
+   * Whether "Sign in with Discord" can work: application id, client secret and
+   * a public URL for Discord to redirect back to. The secret's value is never
+   * exposed, only this boolean — the dashboard uses it to decide whether to
+   * offer the button at all.
+   */
+  discordOAuthConfigured: boolean;
+  /**
+   * The exact redirect URL the server sends to Discord, so the operator
+   * registers *that* rather than whatever the browser's address bar implies —
+   * behind a proxy those differ, and a mismatch fails on discord.com where
+   * nobody sees it. Null when `DASHBOARD_PUBLIC_URL` is unset.
+   */
+  discordRedirectUri: string | null;
   defaultModel: string;
   queueDepth: number;
   activeRuns: number;
@@ -140,6 +154,12 @@ export interface AuthUserDto {
 export interface AuthSessionDto {
   user: AuthUserDto | null;
   isAdmin: boolean;
+  /**
+   * Whether to offer "Sign in with Discord". Lives on this route because it is
+   * the only unauthenticated one — the signed-out screen cannot read
+   * `/api/status`, which is admin-gated.
+   */
+  discordOAuthConfigured: boolean;
 }
 
 export interface MeGuildDto {

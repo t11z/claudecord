@@ -10,11 +10,27 @@ export interface AccessQuery {
 }
 
 /**
+ * Whether this member may use the bot in this guild at all — the guild switch
+ * plus the role allowlist, with no channel dimension.
+ *
+ * Split out from `isAllowed` because signing in to the dashboard asks exactly
+ * this question and has no channel to ask it about. Calling `isAllowed` with a
+ * made-up channel id would return false on every guild that has a channel
+ * allowlist, silently barring those members from the dashboard while
+ * `/dashboard` kept working. `isAllowed` delegates here so the two can't drift.
+ */
+export function mayUseBot(config: GuildConfig, memberRoleIds: string[]): boolean {
+  if (!config.enabled) return false;
+  if (config.allowedRoleIds.length === 0) return true;
+  return memberRoleIds.some((r) => config.allowedRoleIds.includes(r));
+}
+
+/**
  * Allowlist semantics: an empty list means "everything allowed".
  * For threads, the parent channel is what must be allowlisted.
  */
 export function isAllowed(config: GuildConfig, q: AccessQuery): boolean {
-  if (!config.enabled) return false;
+  if (!mayUseBot(config, q.memberRoleIds)) return false;
 
   if (config.allowedChannelIds.length > 0) {
     const effectiveChannel = q.parentChannelId ?? q.channelId;
@@ -22,12 +38,6 @@ export function isAllowed(config: GuildConfig, q: AccessQuery): boolean {
       !config.allowedChannelIds.includes(effectiveChannel) &&
       !config.allowedChannelIds.includes(q.channelId)
     ) {
-      return false;
-    }
-  }
-
-  if (config.allowedRoleIds.length > 0) {
-    if (!q.memberRoleIds.some((r) => config.allowedRoleIds.includes(r))) {
       return false;
     }
   }

@@ -38,6 +38,12 @@ export interface StoredSecrets {
   /** GitHub App used for per-user OAuth Device Flow linking. */
   githubAppClientId?: string;
   githubAppClientSecret?: string;
+  /**
+   * Client secret of the *same* Discord application as the bot — its id is
+   * already `DISCORD_APPLICATION_ID`, which doubles as the OAuth2 client_id.
+   * Only needed for "Sign in with Discord"; the bot itself never uses it.
+   */
+  discordClientSecret?: string;
   /** Discord user id → their linked GitHub identity (tokens included). */
   githubIdentities?: Record<string, StoredGithubIdentity>;
   /** Discord user id → their linked Claude Code OAuth token. */
@@ -120,6 +126,7 @@ export interface EffectiveCredentials {
   discordApplicationId?: string | undefined;
   githubAppClientId?: string | undefined;
   githubAppClientSecret?: string | undefined;
+  discordClientSecret?: string | undefined;
 }
 
 export function resolveCredentials(
@@ -128,6 +135,7 @@ export function resolveCredentials(
     DISCORD_APPLICATION_ID?: string | undefined;
     GITHUB_APP_CLIENT_ID?: string | undefined;
     GITHUB_APP_CLIENT_SECRET?: string | undefined;
+    DISCORD_CLIENT_SECRET?: string | undefined;
   },
   stored: StoredSecrets,
 ): EffectiveCredentials {
@@ -136,5 +144,6 @@ export function resolveCredentials(
     discordApplicationId: env.DISCORD_APPLICATION_ID ?? stored.discordApplicationId,
     githubAppClientId: env.GITHUB_APP_CLIENT_ID ?? stored.githubAppClientId,
     githubAppClientSecret: env.GITHUB_APP_CLIENT_SECRET ?? stored.githubAppClientSecret,
+    discordClientSecret: env.DISCORD_CLIENT_SECRET ?? stored.discordClientSecret,
   };
 }

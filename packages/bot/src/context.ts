@@ -18,6 +18,7 @@ import { stampFreshInstall } from "./migration.js";
 import { RunQueue } from "./queue/queue.js";
 import { type EffectiveCredentials, resolveCredentials, SecretsStore } from "./secrets.js";
 import { DashboardAuth } from "./web/auth.js";
+import type { OAuthState } from "./web/discord-oauth.js";
 import { MagicLinkIssuer } from "./web/magic-link.js";
 
 export interface Repos {
@@ -43,6 +44,8 @@ export interface AppContext {
   auth: DashboardAuth;
   /** Mints/redeems the single-use links `/dashboard` sends. */
   magicLink: MagicLinkIssuer;
+  /** Signs the single-use `state` for "Sign in with Discord". */
+  oauthState: MagicLinkIssuer<OAuthState>;
   engine: ClaudeEngine;
   queue: RunQueue;
   /** threadId → AbortController for currently running queries. */
@@ -78,6 +81,9 @@ export function createContext(env: Env, logger: Logger): AppContext {
     crypto.randomBytes(32).toString("base64url"),
   );
   const magicLink = new MagicLinkIssuer(magicLinkSecret);
+  // Same secret and same guarantees; a separate instance so a state token can
+  // never be consumed as a magic link or vice versa.
+  const oauthState = new MagicLinkIssuer<OAuthState>(magicLinkSecret);
 
   const ctx: AppContext = {
     env,
@@ -96,6 +102,7 @@ export function createContext(env: Env, logger: Logger): AppContext {
     claude,
     auth,
     magicLink,
+    oauthState,
     engine: createClaudeEngine(),
     queue: new RunQueue(env.MAX_CONCURRENT_RUNS),
     activeRuns: new Map(),

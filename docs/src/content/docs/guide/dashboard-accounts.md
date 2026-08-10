@@ -3,11 +3,21 @@ title: Dashboard accounts
 description: Magic-link sign-in, the two roles, and how the first admin is decided.
 ---
 
-The dashboard has no password. The only way in is a one-time link Discord
-sends you — there's nothing to configure, remember or leak besides your
-Discord account itself.
+The dashboard has no password. You sign in as your Discord account — there's
+nothing to configure, remember or leak besides that account itself.
 
 ## Signing in
+
+Two ways, both ending in the same session:
+
+- **Sign in with Discord**, on the dashboard's own sign-in page. Available once
+  an operator has configured it (Setup → *Browser sign-in*); it uses the same
+  Discord application as the bot.
+- **A one-time link from Discord**, described below. Always available, and the
+  only way in before browser sign-in is set up.
+
+Either way you need a server you share with the bot, where your roles allow you
+to use it — the same permission `/config allow-role` controls.
 
 Run `/dashboard` in any server the bot is in and you're allowed to talk to
 it. The bot replies — visible only to you — with a link:

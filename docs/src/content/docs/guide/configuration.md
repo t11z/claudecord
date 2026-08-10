@@ -22,6 +22,7 @@ one. Every user links their own with `/link-claude` (see
 | `DASHBOARD_PORT` | `3000` | Dashboard port |
 | `DASHBOARD_PUBLIC_URL` | `http://localhost:<port>` | Base URL baked into `/dashboard` sign-in links — set explicitly once the browser isn't on the same machine as the bot ([Dashboard accounts](/claudecord/guide/dashboard-accounts/)). A trailing slash is tolerated (stripped). An `https://` value also marks the session cookie `Secure`. |
 | `DASHBOARD_ADMIN_IDS` | — | Comma-separated Discord user IDs that are always dashboard admins |
+| `DISCORD_CLIENT_SECRET` | — | Client secret of the **same** Discord application as the bot, enabling *Sign in with Discord* on the dashboard. Its client id is `DISCORD_APPLICATION_ID`. Also settable in the dashboard (Setup → Browser sign-in); requires `DASHBOARD_PUBLIC_URL` and a matching redirect URL registered in the Developer Portal |
 | `CLAUDE_MODEL` | `claude-sonnet-5` | Default model for new conversations |
 | `DATA_DIR` | `./data` | SQLite DB, secrets store, per-thread workspaces |
 | `MAX_CONCURRENT_RUNS` | `4` | Global cap on parallel Claude runs (each is a subprocess) |

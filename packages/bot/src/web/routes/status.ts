@@ -1,6 +1,8 @@
 import type { Hono } from "hono";
 import type { AppContext } from "../../context.js";
+import { publicUrl } from "../../discord/commands/dashboard.js";
 import type { StatusDto } from "../../types.js";
+import { redirectUri } from "../discord-oauth.js";
 
 const BOT_PERMISSIONS = "397552861248"; // view/send/threads/embed/attach/react/history
 
@@ -21,6 +23,12 @@ export function statusRoutes(app: Hono, ctx: AppContext): void {
       uptimeSeconds: Math.floor((Date.now() - ctx.startedAt) / 1000),
       claudeIdentityCount: ctx.claude.list().length,
       githubAppConfigured: !!(creds.githubAppClientId && creds.githubAppClientSecret),
+      discordOAuthConfigured: !!(
+        creds.discordApplicationId &&
+        creds.discordClientSecret &&
+        ctx.env.DASHBOARD_PUBLIC_URL
+      ),
+      discordRedirectUri: ctx.env.DASHBOARD_PUBLIC_URL ? redirectUri(publicUrl(ctx.env)) : null,
       defaultModel: ctx.env.CLAUDE_MODEL,
       queueDepth: ctx.queue.depth,
       activeRuns: ctx.queue.activeRuns,

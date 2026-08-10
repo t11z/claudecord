@@ -1,6 +1,8 @@
 import type { Context, Hono } from "hono";
 import type { AppContext } from "../../context.js";
+import { publicUrl } from "../../discord/commands/dashboard.js";
 import type { AuthSessionDto } from "../../types.js";
+import { authorizeUrl, exchangeCode, fetchProfile, resolveLogin } from "../discord-oauth.js";
 
 /** Every dead end of the link flow says the same thing — one string, both routes. */
 const LINK_INVALID = "This link is invalid or has expired. Run /dashboard again.";
@@ -34,31 +36,74 @@ function escapeAttr(value: string): string {
     .replaceAll("'", "&#39;");
 }
 
-/**
- * The same "invalid or expired" message as HTML. Both link routes are
- * browser navigations now, not API calls — a bare `c.text(...)` would leave
- * the user staring at plain text on a blank page at exactly the moment they
- * expect to be signed in, the same dead end this fix exists to remove, one
- * layer down.
- */
-function errorPage(): string {
+const PAGE_STYLE =
+  "body { font-family: system-ui, sans-serif; margin: 4rem auto; max-width: 28rem; " +
+  "padding: 0 1rem; text-align: center; }";
+
+/** A minimal standalone page — these are browser navigations, not API calls. */
+function page(title: string, body: string): string {
   return `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex, nofollow" />
-    <title>Sign-in link expired</title>
+    <title>${title}</title>
     <style>
-      body { font-family: system-ui, sans-serif; margin: 4rem auto; max-width: 28rem;
-             padding: 0 1rem; text-align: center; }
+      ${PAGE_STYLE}
     </style>
   </head>
   <body>
-    <p>${LINK_INVALID}</p>
+${body}
   </body>
 </html>
 `;
+}
+
+/**
+ * The same "invalid or expired" message as HTML. A bare `c.text(...)` would
+ * leave the user staring at plain text on a blank page at exactly the moment
+ * they expect to be signed in.
+ */
+function errorPage(): string {
+  return page("Sign-in link expired", `    <p>${LINK_INVALID}</p>`);
+}
+
+/** Escapes for HTML text content — OAuth failure messages are shown verbatim. */
+function escapeText(value: string): string {
+  return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+}
+
+/**
+ * Lands a completed Discord sign-in on a page of our own, which then navigates
+ * to `/`.
+ *
+ * This hop is load-bearing, not decoration. The session cookie is
+ * `SameSite=Strict`, and the OAuth callback arrives as a *cross-site*
+ * navigation from discord.com — so a `303` straight to `/` risks the browser
+ * withholding the brand-new cookie on that follow-up request, landing the user
+ * on a signed-out dashboard right after a successful login. Navigating from our
+ * own page makes the request same-site-initiated, so Strict applies as intended
+ * and the magic-link path keeps its stricter cookie unchanged.
+ */
+function signedInPage(): string {
+  return page(
+    "Signing in…",
+    `    <p>Signing you in…</p>
+    <script>
+      location.replace("/");
+    </script>
+    <noscript><p><a href="/">Continue to the dashboard</a></p></noscript>`,
+  );
+}
+
+/** A failed Discord sign-in, explained, with the way back. */
+function oauthErrorPage(message: string): string {
+  return page(
+    "Sign-in failed",
+    `    <p>${escapeText(message)}</p>
+    <p><a href="/">Back to sign-in</a></p>`,
+  );
 }
 
 /**
@@ -71,30 +116,17 @@ function errorPage(): string {
  * needs a nonce or hash, or the noscript button becomes the only path.
  */
 function interstitial(token: string): string {
-  return `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="robots" content="noindex, nofollow" />
-    <title>Signing in…</title>
-    <style>
-      body { font-family: system-ui, sans-serif; margin: 4rem auto; max-width: 28rem;
-             padding: 0 1rem; text-align: center; }
-    </style>
-  </head>
-  <body>
-    <p>Signing you in…</p>
+  return page(
+    "Signing in…",
+    `    <p>Signing you in…</p>
     <form id="signin" method="post" action="/api/auth/link">
       <input type="hidden" name="token" value="${escapeAttr(token)}" />
       <noscript><button type="submit">Continue to the dashboard</button></noscript>
     </form>
     <script>
       document.getElementById("signin").submit();
-    </script>
-  </body>
-</html>
-`;
+    </script>`,
+  );
 }
 
 /**
@@ -185,9 +217,15 @@ export function authRoutes(app: Hono, ctx: AppContext): void {
 
   /** Null user when signed out — this route is intentionally not behind auth middleware. */
   app.get("/api/auth/session", (c) => {
+    const creds = ctx.credentials();
+    const discordOAuthConfigured = !!(
+      creds.discordApplicationId &&
+      creds.discordClientSecret &&
+      ctx.env.DASHBOARD_PUBLIC_URL
+    );
     const session = ctx.auth.getSession(c);
     if (!session) {
-      return c.json<AuthSessionDto>({ user: null, isAdmin: false });
+      return c.json<AuthSessionDto>({ user: null, isAdmin: false, discordOAuthConfigured });
     }
     const profile = ctx.repos.dashboardUsers.get(session.sub);
     return c.json<AuthSessionDto>({
@@ -198,7 +236,108 @@ export function authRoutes(app: Hono, ctx: AppContext): void {
         avatarUrl: profile?.avatarUrl ?? null,
       },
       isAdmin: session.isAdmin,
+      discordOAuthConfigured,
     });
+  });
+
+  /**
+   * Starts "Sign in with Discord". A plain redirect, so it must be reached by
+   * top-level navigation (an `<a href>`), not a `fetch` — the browser has to
+   * follow it to discord.com.
+   *
+   * Refuses rather than sending the user somewhere broken: without a client
+   * secret there is nothing to exchange the code with, and without
+   * `DASHBOARD_PUBLIC_URL` the redirect URI would be a guessed
+   * `http://localhost:3000/…` that Discord rejects with an error page the
+   * operator never sees.
+   */
+  app.get("/api/auth/discord/start", (c) => {
+    linkHeaders(c);
+    const creds = ctx.credentials();
+    if (!creds.discordApplicationId || !creds.discordClientSecret) {
+      return c.html(oauthErrorPage("Discord sign-in isn't set up on this bot yet."), 503);
+    }
+    if (!ctx.env.DASHBOARD_PUBLIC_URL) {
+      return c.html(
+        oauthErrorPage("This bot has no public URL configured, so Discord can't send you back."),
+        503,
+      );
+    }
+    const state = ctx.oauthState.mint({ kind: "discord-oauth" });
+    return c.redirect(authorizeUrl(creds.discordApplicationId, publicUrl(ctx.env), state), 302);
+  });
+
+  /**
+   * Completes the sign-in. Everything that decides *who* this is comes from
+   * Discord's token exchange; everything that decides *what they may do* comes
+   * from the bot's own connection (`resolveLogin`) — never from the user.
+   */
+  app.get("/api/auth/discord/callback", async (c) => {
+    linkHeaders(c);
+    const creds = ctx.credentials();
+    if (!creds.discordApplicationId || !creds.discordClientSecret) {
+      return c.html(oauthErrorPage("Discord sign-in isn't set up on this bot yet."), 503);
+    }
+
+    // Discord reports user-side failures (e.g. "access_denied") this way.
+    const denied = c.req.query("error");
+    if (denied) return c.html(oauthErrorPage(`Discord sign-in was cancelled (${denied}).`), 400);
+
+    const code = c.req.query("code");
+    const state = c.req.query("state");
+    // Single-use and signed: a replayed or forged state is rejected here.
+    if (!code || !state || !ctx.oauthState.consume(state)) {
+      return c.html(oauthErrorPage("This sign-in link is invalid or has expired."), 400);
+    }
+
+    let profile: Awaited<ReturnType<typeof fetchProfile>>;
+    try {
+      const accessToken = await exchangeCode(
+        creds.discordApplicationId,
+        creds.discordClientSecret,
+        code,
+        publicUrl(ctx.env),
+      );
+      profile = await fetchProfile(accessToken);
+    } catch (err) {
+      // Discord's own error string is third-party text reflected onto our
+      // origin, and the user can't act on it either — log it, show ours.
+      ctx.logger.warn(
+        { err: err instanceof Error ? err.message : String(err) },
+        "discord oauth exchange failed",
+      );
+      return c.html(
+        oauthErrorPage("Couldn't complete the Discord sign-in. Please try again."),
+        400,
+      );
+    }
+
+    const decision = await resolveLogin(ctx, profile.id);
+    if (!decision.ok) return c.html(oauthErrorPage(decision.message), decision.status);
+
+    const existing = ctx.repos.dashboardUsers.get(profile.id);
+    const isAdmin = decideIsAdmin(
+      ctx,
+      profile.id,
+      decision.hasManageGuild,
+      existing?.isAdmin ?? false,
+    );
+    if (isAdmin && !(existing?.isAdmin ?? false)) {
+      ctx.logger.warn({ userId: profile.id }, "dashboard admin granted");
+    }
+
+    ctx.repos.dashboardUsers.upsertLogin({
+      discordUserId: profile.id,
+      username: profile.username,
+      globalName: profile.globalName,
+      avatarUrl: profile.avatarUrl,
+      isAdmin,
+      now: new Date().toISOString(),
+    });
+
+    ctx.auth.issueCookie(c, { sub: profile.id, isAdmin });
+    // Not a redirect — see signedInPage() for why the same-site hop matters.
+    return c.html(signedInPage());
   });
 
   app.post("/api/auth/logout", (c) => {
