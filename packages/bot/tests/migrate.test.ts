@@ -237,6 +237,26 @@ describe("POST /api/migrate/github/claim and /discard", () => {
     expect(ctx.secrets.getLegacy("githubToken")).toBeUndefined();
     expect(ctx.github.list()).toHaveLength(0);
   });
+
+  it("an empty-string legacy token is treated as absent, not offered by /status", async () => {
+    // Some upgraded installs' secrets.json carries `"githubToken": ""` from an
+    // old deploy that set the env var to nothing. Before this was treated
+    // consistently, /status reported it present (`!== undefined`) and the
+    // wizard offered to adopt it, but /claim (correctly, via `if (!token)`)
+    // 404ed — an admin saw an offer they could never actually take.
+    seedLegacySecrets({ githubToken: "" });
+    const { ctx, app } = makeApp();
+    const cookie = await adminCookie(ctx, app);
+
+    const status = await app.request("/api/migrate/status", { headers: { Cookie: cookie } });
+    expect((await bodyOf(status)).legacy.githubToken).toBe(false);
+
+    const claim = await app.request("/api/migrate/github/claim", {
+      method: "POST",
+      headers: { Cookie: cookie },
+    });
+    expect(claim.status).toBe(404);
+  });
 });
 
 describe("POST /api/migrate/password/discard", () => {

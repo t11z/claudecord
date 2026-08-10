@@ -89,10 +89,17 @@ export class SecretsStore {
     return this.cache;
   }
 
-  /** The raw value of a legacy key, if the file still carries one from before the per-user model. */
+  /**
+   * The raw value of a legacy key, if the file still carries one from before
+   * the per-user model. An empty string counts as absent, same as a missing
+   * key — some upgraded installs' secrets.json carries `"githubToken": ""`
+   * from an old deploy that set an env var to nothing, and treating that as
+   * "present" made the migration wizard offer to adopt a token that the
+   * claim endpoint (correctly, via `if (!token)`) then 404ed on.
+   */
   getLegacy(key: LegacySecretsKey): string | undefined {
     const value = (this.cache as unknown as Record<string, unknown>)[key];
-    return typeof value === "string" ? value : undefined;
+    return typeof value === "string" && value.length > 0 ? value : undefined;
   }
 
   /** Removes legacy keys from the file entirely, once claimed or explicitly discarded. */
