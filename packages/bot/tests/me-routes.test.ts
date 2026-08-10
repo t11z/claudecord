@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import type { Client } from "discord.js";
 import type { Hono } from "hono";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppContext } from "../src/context.js";
@@ -30,6 +31,63 @@ function sdkStream(messages: unknown[]): AsyncIterable<unknown> {
       for (const m of messages) yield m;
     },
   };
+}
+
+/**
+ * A Discord client where `userId` is a member of one guild holding `roleIds`.
+ * Shaped like `fakeDiscordWithMember` in tests/migrate.test.ts, plus the role
+ * cache the GitHub link gate reads. Without this, `ctx.discord` is null and the
+ * gate correctly refuses (503) — see `checkGithubLinkEligibility`.
+ */
+function fakeDiscordWithRoles(guildId: string, userId: string, roleIds: string[]) {
+  const member = { roles: { cache: new Map(roleIds.map((r) => [r, { id: r }])) } };
+  const guild = {
+    id: guildId,
+    name: "Test Guild",
+    iconURL: () => null,
+    members: {
+      fetch: async (id: string) => (id === userId ? member : Promise.reject(new Error())),
+    },
+  };
+  return { guilds: { cache: new Map([[guildId, guild]]) } } as unknown as Client;
+}
+
+/** A connected client that shares no guild with anyone — for the "no mutual server" case. */
+function fakeDiscordNoGuilds() {
+  return { guilds: { cache: new Map() } } as unknown as Client;
+}
+
+/**
+ * Two guilds: the first's `members.fetch` rejects (rate limit / network / left
+ * the server), the second grants `roleIds`. Proves the walk keeps going instead
+ * of failing the whole request on one bad guild.
+ */
+function fakeDiscordFirstGuildThrows(userId: string, roleIds: string[]) {
+  const ok = { roles: { cache: new Map(roleIds.map((r) => [r, { id: r }])) } };
+  const broken = {
+    id: "g-broken",
+    name: "Broken",
+    iconURL: () => null,
+    members: {
+      fetch: async () => {
+        throw new Error("429 rate limited");
+      },
+    },
+  };
+  const good = {
+    id: "g-good",
+    name: "Good",
+    iconURL: () => null,
+    members: { fetch: async (id: string) => (id === userId ? ok : Promise.reject(new Error())) },
+  };
+  return {
+    guilds: {
+      cache: new Map([
+        ["g-broken", broken],
+        ["g-good", good],
+      ]),
+    },
+  } as unknown as Client;
 }
 
 function claudeOk() {
@@ -136,6 +194,91 @@ describe("GET /api/me", () => {
     expect(body.github.skipped).toBe(false);
     expect(body.onboardingComplete).toBe(false);
   });
+
+  it("reports appConfigured from the GitHub App credentials", async () => {
+    const { ctx, app } = makeApp();
+    const cookie = await cookieFor(ctx, app, "u1");
+    expect(
+      (await bodyOf(await app.request("/api/me", { headers: { Cookie: cookie } }))).github
+        .appConfigured,
+    ).toBe(false);
+
+    ctx.secrets.update({ githubAppClientId: "cid", githubAppClientSecret: "csecret" });
+    expect(
+      (await bodyOf(await app.request("/api/me", { headers: { Cookie: cookie } }))).github
+        .appConfigured,
+    ).toBe(true);
+  });
+
+  it("linkBlockedReason and per-guild githubAllowed mirror the role gate", async () => {
+    const { ctx, app } = makeApp();
+    ctx.secrets.update({ githubAppClientId: "cid", githubAppClientSecret: "csecret" });
+    ctx.discord = fakeDiscordWithRoles("g1", "u1", ["other-role"]);
+    ctx.repos.guildConfig.upsert({
+      ...ctx.repos.guildConfig.get("g1"),
+      guildId: "g1",
+      githubRoleIds: ["gh-allowed"],
+    });
+    const cookie = await cookieFor(ctx, app, "u1");
+    const denied = await bodyOf(await app.request("/api/me", { headers: { Cookie: cookie } }));
+    expect(denied.github.linkBlockedReason).toMatch(/role that's allowed/i);
+    expect(denied.guilds).toHaveLength(1);
+    expect(denied.guilds[0].githubAllowed).toBe(false);
+
+    ctx.discord = fakeDiscordWithRoles("g1", "u1", ["gh-allowed"]);
+    const allowed = await bodyOf(await app.request("/api/me", { headers: { Cookie: cookie } }));
+    expect(allowed.github.linkBlockedReason).toBeNull();
+    expect(allowed.guilds[0].githubAllowed).toBe(true);
+  });
+
+  it("with no gate configured, every mutual guild allows linking", async () => {
+    const { ctx, app } = makeApp();
+    ctx.secrets.update({ githubAppClientId: "cid", githubAppClientSecret: "csecret" });
+    ctx.discord = fakeDiscordWithRoles("g1", "u1", []);
+    const cookie = await cookieFor(ctx, app, "u1");
+    const body = await bodyOf(await app.request("/api/me", { headers: { Cookie: cookie } }));
+    expect(body.github.linkBlockedReason).toBeNull();
+    expect(body.guilds[0].githubAllowed).toBe(true);
+  });
+
+  it("blames the missing GitHub App before anything else", async () => {
+    const { ctx, app } = makeApp();
+    ctx.discord = fakeDiscordWithRoles("g1", "u1", []);
+    const cookie = await cookieFor(ctx, app, "u1");
+    const body = await bodyOf(await app.request("/api/me", { headers: { Cookie: cookie } }));
+    expect(body.github.linkBlockedReason).toMatch(/no GitHub App configured/i);
+  });
+
+  it("says Discord is unreachable — not 'wrong role' — while the bot is disconnected", async () => {
+    // The regression this field exists for: with ctx.discord null the guild walk
+    // is empty, and a naive `mayLink: false` would have made the UI claim the
+    // user lacks a role, which is not true.
+    const { ctx, app } = makeApp();
+    ctx.secrets.update({ githubAppClientId: "cid", githubAppClientSecret: "csecret" });
+    const cookie = await cookieFor(ctx, app, "u1");
+    const body = await bodyOf(await app.request("/api/me", { headers: { Cookie: cookie } }));
+    expect(body.github.linkBlockedReason).toMatch(/connected to Discord/i);
+    // It may mention roles ("can't check your roles"), but must never blame the
+    // user for lacking one — that's the misleading claim this field prevents.
+    expect(body.github.linkBlockedReason).not.toMatch(/don't have a role/i);
+  });
+
+  it("says there's no mutual server when connected but sharing none", async () => {
+    const { ctx, app } = makeApp();
+    ctx.secrets.update({ githubAppClientId: "cid", githubAppClientSecret: "csecret" });
+    ctx.discord = fakeDiscordNoGuilds();
+    const cookie = await cookieFor(ctx, app, "u1");
+    const body = await bodyOf(await app.request("/api/me", { headers: { Cookie: cookie } }));
+    expect(body.github.linkBlockedReason).toMatch(/don't share a server/i);
+  });
+
+  it("exposes claude.linkedAt once linked", async () => {
+    const { ctx, app } = makeApp();
+    ctx.claude.link("u1", "sk-ant-oat01-x");
+    const cookie = await cookieFor(ctx, app, "u1");
+    const body = await bodyOf(await app.request("/api/me", { headers: { Cookie: cookie } }));
+    expect(body.claude.linkedAt).toEqual(expect.any(String));
+  });
 });
 
 describe("POST/DELETE /api/me/claude", () => {
@@ -231,6 +374,7 @@ describe("GitHub device flow via /api/me/github/device*", () => {
   it("device start surfaces the code from GitHub", async () => {
     const { ctx, app } = makeApp();
     ctx.secrets.update({ githubAppClientId: "cid", githubAppClientSecret: "csecret" });
+    ctx.discord = fakeDiscordWithRoles("g1", "u1", []);
     const cookie = await cookieFor(ctx, app, "u1");
     vi.stubGlobal(
       "fetch",
@@ -257,6 +401,7 @@ describe("GitHub device flow via /api/me/github/device*", () => {
   it("poll authorizes and links, resolving the login", async () => {
     const { ctx, app } = makeApp();
     ctx.secrets.update({ githubAppClientId: "cid", githubAppClientSecret: "csecret" });
+    ctx.discord = fakeDiscordWithRoles("g1", "u1", []);
     const cookie = await cookieFor(ctx, app, "u1");
     const fetchMock = vi.fn(async (url: unknown) => {
       const href = String(url);
@@ -276,6 +421,190 @@ describe("GitHub device flow via /api/me/github/device*", () => {
     expect(body.status).toBe("authorized");
     expect(body.login).toBe("octocat");
     expect(ctx.github.get("u1")?.login).toBe("octocat");
+  });
+
+  it("device start is refused 503 when the bot isn't connected to Discord", async () => {
+    // ctx.discord stays null — roles are unreadable, so the honest answer is
+    // "not now", never a role complaint that isn't true.
+    const { ctx, app } = makeApp();
+    ctx.secrets.update({ githubAppClientId: "cid", githubAppClientSecret: "csecret" });
+    const cookie = await cookieFor(ctx, app, "u1");
+    const res = await app.request("/api/me/github/device", {
+      method: "POST",
+      headers: { Cookie: cookie },
+    });
+    expect(res.status).toBe(503);
+    expect((await bodyOf(res)).message).toMatch(/connected to Discord/i);
+  });
+
+  it("device start is refused 403 when no mutual server exists", async () => {
+    const { ctx, app } = makeApp();
+    ctx.secrets.update({ githubAppClientId: "cid", githubAppClientSecret: "csecret" });
+    ctx.discord = fakeDiscordNoGuilds();
+    const cookie = await cookieFor(ctx, app, "u1");
+    const res = await app.request("/api/me/github/device", {
+      method: "POST",
+      headers: { Cookie: cookie },
+    });
+    expect(res.status).toBe(403);
+    expect((await bodyOf(res)).message).toMatch(/don't share a server/i);
+  });
+
+  it("device start is refused 403 when the guild role gate excludes the user", async () => {
+    const { ctx, app } = makeApp();
+    ctx.secrets.update({ githubAppClientId: "cid", githubAppClientSecret: "csecret" });
+    ctx.discord = fakeDiscordWithRoles("g1", "u1", ["other-role"]);
+    ctx.repos.guildConfig.upsert({
+      ...ctx.repos.guildConfig.get("g1"),
+      guildId: "g1",
+      githubRoleIds: ["gh-allowed"],
+    });
+    const cookie = await cookieFor(ctx, app, "u1");
+    const res = await app.request("/api/me/github/device", {
+      method: "POST",
+      headers: { Cookie: cookie },
+    });
+    expect(res.status).toBe(403);
+    expect((await bodyOf(res)).message).toMatch(/role that's allowed/i);
+  });
+
+  it("one guild failing its member fetch doesn't stop the others being checked", async () => {
+    const { ctx, app } = makeApp();
+    ctx.secrets.update({ githubAppClientId: "cid", githubAppClientSecret: "csecret" });
+    ctx.discord = fakeDiscordFirstGuildThrows("u1", ["gh-allowed"]);
+    ctx.repos.guildConfig.upsert({
+      ...ctx.repos.guildConfig.get("g-good"),
+      guildId: "g-good",
+      githubRoleIds: ["gh-allowed"],
+    });
+    const cookie = await cookieFor(ctx, app, "u1");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse(200, {
+          device_code: "dev1",
+          user_code: "WXYZ-1",
+          verification_uri: "https://github.com/login/device",
+          expires_in: 900,
+          interval: 5,
+        }),
+      ),
+    );
+    const res = await app.request("/api/me/github/device", {
+      method: "POST",
+      headers: { Cookie: cookie },
+    });
+    // The broken guild is skipped, the good one grants — and no 500 escaped.
+    expect(res.status).toBe(200);
+    const me = await bodyOf(await app.request("/api/me", { headers: { Cookie: cookie } }));
+    expect(me.guilds).toHaveLength(1);
+    expect(me.guilds[0].id).toBe("g-good");
+  });
+
+  it("device start passes when the user holds the gated role in one server", async () => {
+    const { ctx, app } = makeApp();
+    ctx.secrets.update({ githubAppClientId: "cid", githubAppClientSecret: "csecret" });
+    ctx.discord = fakeDiscordWithRoles("g1", "u1", ["gh-allowed"]);
+    ctx.repos.guildConfig.upsert({
+      ...ctx.repos.guildConfig.get("g1"),
+      guildId: "g1",
+      githubRoleIds: ["gh-allowed"],
+    });
+    const cookie = await cookieFor(ctx, app, "u1");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse(200, {
+          device_code: "dev1",
+          user_code: "WXYZ-1",
+          verification_uri: "https://github.com/login/device",
+          expires_in: 900,
+          interval: 5,
+        }),
+      ),
+    );
+    const res = await app.request("/api/me/github/device", {
+      method: "POST",
+      headers: { Cookie: cookie },
+    });
+    expect(res.status).toBe(200);
+    expect((await bodyOf(res)).ok).toBe(true);
+  });
+
+  it("the poll that authorizes is gated too — an excluded user cannot store an identity", async () => {
+    // The load-bearing check: the deviceCode carries no guild info, so gating
+    // only the start would be bypassable by calling poll directly.
+    const { ctx, app } = makeApp();
+    ctx.secrets.update({ githubAppClientId: "cid", githubAppClientSecret: "csecret" });
+    ctx.discord = fakeDiscordWithRoles("g1", "u1", ["other-role"]);
+    ctx.repos.guildConfig.upsert({
+      ...ctx.repos.guildConfig.get("g1"),
+      guildId: "g1",
+      githubRoleIds: ["gh-allowed"],
+    });
+    const cookie = await cookieFor(ctx, app, "u1");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: unknown) =>
+        String(url).includes("access_token")
+          ? jsonResponse(200, { access_token: "gho_x", expires_in: 28800 })
+          : jsonResponse(200, { login: "octocat" }),
+      ),
+    );
+    const res = await app.request("/api/me/github/device/poll", {
+      method: "POST",
+      headers: { Cookie: cookie, "Content-Type": "application/json" },
+      body: JSON.stringify({ deviceCode: "dev1" }),
+    });
+    expect(res.status).toBe(403);
+    expect(ctx.github.get("u1")).toBeUndefined();
+  });
+
+  it("a pending poll does not re-check eligibility — no members.fetch storm", async () => {
+    // Poll runs every ~5s for up to 900s. Checking the gate on every pending
+    // poll would mean a members.fetch per guild each time, against a
+    // rate-limited API. The gate belongs on the terminal poll only.
+    const { ctx, app } = makeApp();
+    ctx.secrets.update({ githubAppClientId: "cid", githubAppClientSecret: "csecret" });
+    const memberFetch = vi.fn(async () => ({ roles: { cache: new Map() } }));
+    ctx.discord = {
+      guilds: {
+        cache: new Map([
+          ["g1", { id: "g1", name: "G", iconURL: () => null, members: { fetch: memberFetch } }],
+        ]),
+      },
+    } as unknown as Client;
+    const cookie = await cookieFor(ctx, app, "u1");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => jsonResponse(200, { error: "authorization_pending" })),
+    );
+    for (let i = 0; i < 3; i++) {
+      await app.request("/api/me/github/device/poll", {
+        method: "POST",
+        headers: { Cookie: cookie, "Content-Type": "application/json" },
+        body: JSON.stringify({ deviceCode: "dev1" }),
+      });
+    }
+    expect(memberFetch).not.toHaveBeenCalled();
+  });
+
+  it("unlink stays possible even when the role gate now excludes the user", async () => {
+    const { ctx, app } = makeApp();
+    await ctx.github.link("u1", { accessToken: "a1", expiresAt: null });
+    ctx.discord = fakeDiscordWithRoles("g1", "u1", ["other-role"]);
+    ctx.repos.guildConfig.upsert({
+      ...ctx.repos.guildConfig.get("g1"),
+      guildId: "g1",
+      githubRoleIds: ["gh-allowed"],
+    });
+    const cookie = await cookieFor(ctx, app, "u1");
+    const res = await app.request("/api/me/github", {
+      method: "DELETE",
+      headers: { Cookie: cookie },
+    });
+    expect(res.status).toBe(200);
+    expect(ctx.github.get("u1")).toBeUndefined();
   });
 
   it("poll reports pending without linking anything", async () => {

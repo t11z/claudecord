@@ -146,16 +146,55 @@ export interface MeGuildDto {
   id: string;
   name: string;
   iconUrl: string | null;
+  /**
+   * Whether this server's GitHub role gate (`/config allow-github-role`)
+   * permits this user. Shown so a member can see where their GitHub access
+   * will actually apply — the gate is re-checked per guild at run time
+   * (discord/conversation.ts), so this is a preview, not the enforcement.
+   */
+  githubAllowed: boolean;
 }
 
 export interface MeDto {
   user: AuthUserDto;
-  claude: { linked: boolean; lastVerifiedAt: string | null };
-  github: { linked: boolean; login: string | null; skipped: boolean };
+  claude: { linked: boolean; linkedAt: string | null; lastVerifiedAt: string | null };
+  github: {
+    linked: boolean;
+    login: string | null;
+    skipped: boolean;
+    /** Whether a GitHub App is configured at all — without one, linking is impossible. */
+    appConfigured: boolean;
+    /**
+     * Why this user can't link GitHub right now, in words, or null when they
+     * can. Computed server-side by the same function the mutations enforce
+     * with (`githubLinkEligibility`), so the UI never invents its own reason
+     * and never contradicts the server. Advisory only: every mutation
+     * re-checks and never trusts this.
+     */
+    linkBlockedReason: string | null;
+  };
   /** Derived, not stored: linked Claude, and either linked or skipped GitHub. */
   onboardingComplete: boolean;
   /** Servers this user shares with the bot — informational, not an access grant. */
   guilds: MeGuildDto[];
+}
+
+/**
+ * One user's identity links, for the admin "Verknüpfungen" view. A user known
+ * only through a Discord-side link has no dashboard profile yet, so every
+ * display field is nullable. Tokens are never projected here.
+ */
+export interface IdentityGraphRowDto {
+  discordUserId: string;
+  username: string | null;
+  globalName: string | null;
+  avatarUrl: string | null;
+  claude: { linked: boolean; linkedAt: string | null; lastVerifiedAt: string | null };
+  github: { linked: boolean; login: string | null; linkedAt: string | null };
+}
+
+export interface IdentityGraphDto {
+  rows: IdentityGraphRowDto[];
 }
 
 export interface MeUsageDto {

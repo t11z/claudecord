@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useState } from "preact/hooks";
 import { api, type MeDto } from "../api.ts";
 import { Card } from "../components.tsx";
+import { useGithubDeviceFlow } from "../useGithubDeviceFlow.ts";
 
 type ClaudeState = "idle" | "busy" | "error";
-type GithubState = "idle" | "starting" | "waiting" | "authorized" | "error";
 
 export function Welcome(props: { me: MeDto; onComplete: () => void }) {
   const { me } = props;
@@ -13,19 +13,7 @@ export function Welcome(props: { me: MeDto; onComplete: () => void }) {
   const [claudeState, setClaudeState] = useState<ClaudeState>("idle");
   const [claudeMessage, setClaudeMessage] = useState<string | null>(null);
 
-  const [githubState, setGithubState] = useState<GithubState>("idle");
-  const [githubMessage, setGithubMessage] = useState<string | null>(null);
-  const [deviceCode, setDeviceCode] = useState<{
-    userCode: string;
-    verificationUri: string;
-  } | null>(null);
-  const pollTimer = useRef<number | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (pollTimer.current) window.clearTimeout(pollTimer.current);
-    };
-  }, []);
+  const github = useGithubDeviceFlow();
 
   const submitClaude = async () => {
     setClaudeState("busy");
@@ -34,70 +22,28 @@ export function Welcome(props: { me: MeDto; onComplete: () => void }) {
       const result = await api.linkMyClaude(claudeToken);
       if (result.ok) {
         setClaudeToken("");
+        setClaudeState("idle");
         setStep(3);
       } else {
+        // Not in a `finally`: that used to reset to "idle" unconditionally and
+        // clobbered this, so every error rendered as a muted note instead.
         setClaudeState("error");
         setClaudeMessage(result.message);
       }
     } catch (err) {
       setClaudeState("error");
       setClaudeMessage(err instanceof Error ? err.message : String(err));
-    } finally {
-      setClaudeState("idle");
     }
-  };
-
-  const startGithub = async () => {
-    setGithubState("starting");
-    setGithubMessage(null);
-    try {
-      const device = await api.startMyGithubDevice();
-      if (!device.ok || !device.deviceCode || !device.userCode || !device.verificationUri) {
-        setGithubState("error");
-        setGithubMessage(device.message ?? "Couldn't start linking.");
-        return;
-      }
-      setDeviceCode({ userCode: device.userCode, verificationUri: device.verificationUri });
-      setGithubState("waiting");
-      poll(
-        device.deviceCode,
-        (device.interval ?? 5) * 1000,
-        Date.now() + (device.expiresIn ?? 900) * 1000,
-      );
-    } catch (err) {
-      setGithubState("error");
-      setGithubMessage(err instanceof Error ? err.message : String(err));
-    }
-  };
-
-  const poll = (deviceCode: string, intervalMs: number, deadline: number) => {
-    pollTimer.current = window.setTimeout(async () => {
-      if (Date.now() > deadline) {
-        setGithubState("error");
-        setGithubMessage("The code expired. Try again.");
-        return;
-      }
-      try {
-        const result = await api.pollMyGithubDevice(deviceCode);
-        if (result.status === "authorized") {
-          setGithubState("authorized");
-        } else if (result.status === "error") {
-          setGithubState("error");
-          setGithubMessage(result.message ?? "Linking failed.");
-        } else {
-          poll(deviceCode, (result.interval ?? intervalMs / 1000) * 1000, deadline);
-        }
-      } catch (err) {
-        setGithubState("error");
-        setGithubMessage(err instanceof Error ? err.message : String(err));
-      }
-    }, intervalMs);
   };
 
   const skipGithub = async () => {
     await api.skipMyGithub().catch(() => {});
     props.onComplete();
   };
+
+  // The server computes this with the same function it enforces with, so the
+  // wording can never drift from what a link attempt would actually say.
+  const githubBlocked = me.github.linkBlockedReason;
 
   return (
     <div class="login-wrap">
@@ -110,7 +56,7 @@ export function Welcome(props: { me: MeDto; onComplete: () => void }) {
           <div class="wizard-steps">
             <div class="step done" />
             <div class={`step ${step > 2 || me.claude.linked ? "done" : ""}`} />
-            <div class={`step ${githubState === "authorized" ? "done" : ""}`} />
+            <div class={`step ${github.state === "authorized" ? "done" : ""}`} />
           </div>
 
           {step === 1 || step >= 2 ? (
@@ -159,33 +105,43 @@ export function Welcome(props: { me: MeDto; onComplete: () => void }) {
                 Optional: link your own GitHub account so agentic runs act as you. Only matters if
                 the server enables agentic mode.
               </p>
-              {githubState === "idle" || githubState === "error" ? (
+              <p class="muted">
+                You can also run <code>/link-github link</code> in Discord — same thing, either way.
+              </p>
+              {github.state === "idle" || github.state === "error" ? (
                 <>
-                  <button type="button" onClick={() => void startGithub()}>
-                    Link GitHub
-                  </button>{" "}
+                  {/* Explained up front rather than discovered by clicking a
+                      button that was always going to fail. */}
+                  {githubBlocked ? <p class="muted">{githubBlocked}</p> : null}
+                  {githubBlocked ? null : (
+                    <>
+                      <button type="button" onClick={github.start}>
+                        Link GitHub
+                      </button>{" "}
+                    </>
+                  )}
                   <button type="button" onClick={() => void skipGithub()}>
                     Skip
                   </button>
-                  {githubMessage ? <p>{githubMessage}</p> : null}
+                  {github.message ? <p>{github.message}</p> : null}
                 </>
               ) : null}
-              {githubState === "starting" ? <p class="muted">Requesting a code…</p> : null}
-              {githubState === "waiting" && deviceCode ? (
+              {github.state === "starting" ? <p class="muted">Requesting a code…</p> : null}
+              {github.state === "waiting" && github.device ? (
                 <>
                   <p>
                     1. Open{" "}
-                    <a href={deviceCode.verificationUri} target="_blank" rel="noreferrer">
-                      {deviceCode.verificationUri}
+                    <a href={github.device.verificationUri} target="_blank" rel="noreferrer">
+                      {github.device.verificationUri}
                     </a>
                   </p>
                   <p>
-                    2. Enter this code: <code>{deviceCode.userCode}</code>
+                    2. Enter this code: <code>{github.device.userCode}</code>
                   </p>
                   <p class="muted">Waiting for you to authorize…</p>
                 </>
               ) : null}
-              {githubState === "authorized" ? (
+              {github.state === "authorized" ? (
                 <>
                   <p>✅ GitHub linked.</p>
                   <button type="button" onClick={() => props.onComplete()}>

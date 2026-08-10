@@ -1,6 +1,7 @@
 import { useEffect, useState } from "preact/hooks";
 import { api, type MeDto } from "../api.ts";
 import { Badge, Card, Stat } from "../components.tsx";
+import { useGithubDeviceFlow } from "../useGithubDeviceFlow.ts";
 
 export function Account(props: { me: MeDto; onChange: () => void }) {
   const { me } = props;
@@ -9,12 +10,7 @@ export function Account(props: { me: MeDto; onChange: () => void }) {
   const [claudeBusy, setClaudeBusy] = useState(false);
   const [claudeMessage, setClaudeMessage] = useState<string | null>(null);
 
-  const [githubBusy, setGithubBusy] = useState(false);
-  const [githubMessage, setGithubMessage] = useState<string | null>(null);
-  const [deviceCode, setDeviceCode] = useState<{
-    userCode: string;
-    verificationUri: string;
-  } | null>(null);
+  const github = useGithubDeviceFlow(props.onChange);
 
   const [usage, setUsage] = useState<Awaited<ReturnType<typeof api.meUsage>> | null>(null);
 
@@ -47,47 +43,13 @@ export function Account(props: { me: MeDto; onChange: () => void }) {
     props.onChange();
   };
 
-  const startGithub = async () => {
-    setGithubBusy(true);
-    setGithubMessage(null);
-    try {
-      const device = await api.startMyGithubDevice();
-      if (!device.ok || !device.deviceCode || !device.userCode || !device.verificationUri) {
-        setGithubMessage(device.message ?? "Couldn't start linking.");
-        return;
-      }
-      setDeviceCode({ userCode: device.userCode, verificationUri: device.verificationUri });
-      const deadline = Date.now() + (device.expiresIn ?? 900) * 1000;
-      const interval = (device.interval ?? 5) * 1000;
-      const poll = () => {
-        window.setTimeout(async () => {
-          if (Date.now() > deadline) {
-            setGithubMessage("The code expired. Try again.");
-            setDeviceCode(null);
-            return;
-          }
-          const result = await api.pollMyGithubDevice(device.deviceCode!);
-          if (result.status === "authorized") {
-            setDeviceCode(null);
-            props.onChange();
-          } else if (result.status === "error") {
-            setGithubMessage(result.message ?? "Linking failed.");
-            setDeviceCode(null);
-          } else {
-            poll();
-          }
-        }, interval);
-      };
-      poll();
-    } finally {
-      setGithubBusy(false);
-    }
-  };
-
   const unlinkGithub = async () => {
     await api.unlinkMyGithub().catch(() => {});
     props.onChange();
   };
+
+  // Server-computed, from the same function the mutations enforce with.
+  const githubBlocked = me.github.linkBlockedReason;
 
   return (
     <>
@@ -154,25 +116,30 @@ export function Account(props: { me: MeDto; onChange: () => void }) {
           <button type="button" onClick={() => void unlinkGithub()}>
             Unlink
           </button>
-        ) : deviceCode ? (
+        ) : github.device ? (
           <>
             <p>
               1. Open{" "}
-              <a href={deviceCode.verificationUri} target="_blank" rel="noreferrer">
-                {deviceCode.verificationUri}
+              <a href={github.device.verificationUri} target="_blank" rel="noreferrer">
+                {github.device.verificationUri}
               </a>
             </p>
             <p>
-              2. Enter this code: <code>{deviceCode.userCode}</code>
+              2. Enter this code: <code>{github.device.userCode}</code>
             </p>
             <p class="muted">Waiting for you to authorize…</p>
           </>
+        ) : githubBlocked ? (
+          <p class="muted">{githubBlocked}</p>
         ) : (
-          <button type="button" disabled={githubBusy} onClick={() => void startGithub()}>
-            {githubBusy ? "Starting…" : "Link GitHub"}
+          <button type="button" disabled={github.state === "starting"} onClick={github.start}>
+            {github.state === "starting" ? "Starting…" : "Link GitHub"}
           </button>
         )}
-        {githubMessage ? <p class="muted">{githubMessage}</p> : null}
+        {github.message ? <p class="muted">{github.message}</p> : null}
+        <p class="muted" style="margin-top:0.8rem">
+          Or run <code>/link-github link</code> in Discord — either way works.
+        </p>
       </Card>
     </>
   );

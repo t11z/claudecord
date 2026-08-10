@@ -52,6 +52,7 @@ const ADMIN_ROUTES: { method: string; path: string }[] = [
   { method: "GET", path: "/api/github/identities" },
   { method: "DELETE", path: "/api/github/identities/u1" },
   { method: "GET", path: "/api/claude/identities" },
+  { method: "GET", path: "/api/identity-graph" },
   { method: "DELETE", path: "/api/claude/identities/u1" },
   { method: "POST", path: "/api/claude/identities/u1/check" },
   { method: "GET", path: "/api/migrate/status" },
