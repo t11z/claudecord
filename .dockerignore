@@ -1,0 +1,21 @@
+# Keep the build context to sources. Without this, `COPY packages ./packages`
+# drags the host's node_modules in *after* `npm ci` has run, overwriting the
+# container's freshly installed tree — including better-sqlite3's compiled
+# .node, which is architecture-specific. CI never noticed (a fresh checkout has
+# no node_modules) but any local `docker build` would silently produce an image
+# carrying the host's binaries.
+**/node_modules
+
+# Regenerated inside the image by `npm run build`; copying stale output in would
+# mask a broken build instead of failing it.
+packages/bot/dist
+packages/bot/public
+
+# Never belongs in an image layer.
+.env
+.env.*
+!.env.example
+
+.git
+.github
+*.log
