@@ -1,6 +1,7 @@
 import { useEffect, useState } from "preact/hooks";
 import { api, type MeDto } from "../api.ts";
 import { Badge, Card, Stat } from "../components.tsx";
+import { IdentityGraph } from "../IdentityGraph.tsx";
 import { useGithubDeviceFlow } from "../useGithubDeviceFlow.ts";
 
 export function Account(props: { me: MeDto; onChange: () => void }) {
@@ -54,6 +55,19 @@ export function Account(props: { me: MeDto; onChange: () => void }) {
   return (
     <>
       <h1>Your account</h1>
+
+      <Card title="Your linked accounts">
+        <IdentityGraph
+          discord={{
+            name: me.user.globalName ?? me.user.username ?? me.user.id,
+            avatarUrl: me.user.avatarUrl,
+          }}
+          claude={{ linked: me.claude.linked, linkedAt: me.claude.linkedAt }}
+          github={{ linked: me.github.linked, login: me.github.login, linkedAt: null }}
+          githubBlockedReason={githubBlocked}
+        />
+      </Card>
+
       <div class="grid">
         <Stat label="Signed in as" value={me.user.globalName ?? me.user.username ?? me.user.id} />
         {usage ? <Stat label="Runs (30d)" value={usage.totalRuns} /> : null}

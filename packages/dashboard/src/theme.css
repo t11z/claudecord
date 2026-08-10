@@ -378,3 +378,158 @@ th {
 .wizard-steps .step.done {
   background: var(--accent);
 }
+
+/* Identity graph — one Discord account and what's linked to it. Colours come
+   only from the semantic tokens above, so light/dark needs no extra rules.
+   --accent-strong is deliberately avoided: it isn't redefined for dark. */
+/* Three columns: hub, the wire span, branches. The middle column IS the
+   connector, so it can never drift out of alignment with either end. */
+.identity-graph {
+  display: grid;
+  grid-template-columns: auto clamp(2rem, 12vw, 5rem) 1fr;
+  align-items: center;
+  padding: 0.8rem 0;
+}
+
+.identity-graph .wires {
+  align-self: stretch;
+  width: 100%;
+  height: auto;
+  min-height: 3.5rem;
+  pointer-events: none;
+}
+
+.identity-graph .wire {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.identity-graph .wire.on {
+  stroke: var(--ok);
+}
+
+.identity-graph .wire.off {
+  stroke: var(--border);
+  stroke-dasharray: 4 5;
+}
+
+.identity-graph .hub {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.identity-graph .avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--border);
+  display: block;
+}
+
+.identity-graph .avatar.fallback {
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: linear-gradient(135deg, var(--terracotta) 0%, var(--blurple) 130%);
+  color: #fff;
+  font-family: var(--serif);
+  font-size: 1.05rem;
+}
+
+.identity-graph .who {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.identity-graph .branches {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.identity-graph .leaf {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.identity-graph .mark {
+  width: 20px;
+  height: 20px;
+  flex: none;
+}
+
+.identity-graph .leaf.on .mark {
+  fill: var(--accent);
+}
+
+/* Open branch: outline-only feel via a muted fill, matching the dashed wire. */
+.identity-graph .leaf.off .mark {
+  fill: var(--text-muted);
+  opacity: 0.45;
+}
+
+.identity-graph .label {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+  min-width: 0;
+}
+
+.identity-graph .what {
+  font-size: 0.85em;
+  color: var(--text-muted);
+}
+
+.identity-graph .detail {
+  overflow-wrap: anywhere;
+}
+
+.identity-graph .leaf.off .detail {
+  color: var(--text-muted);
+}
+
+.identity-graph .detail.cmd {
+  font-family: var(--mono);
+  font-size: 0.85em;
+}
+
+.identity-graph.compact {
+  padding: 0.4rem 0;
+  gap: 0 clamp(1rem, 5vw, 2.5rem);
+}
+
+.identity-graph.compact .avatar {
+  width: 26px;
+  height: 26px;
+  font-size: 0.85rem;
+}
+
+.identity-graph.compact .branches {
+  gap: 0.4rem;
+}
+
+.identity-graph.compact .mark {
+  width: 16px;
+  height: 16px;
+}
+
+/* Colour is never the only signal, but under forced-colors even the tokens go
+   away — keep the dashed/solid distinction, which survives. */
+@media (forced-colors: active) {
+  .identity-graph .wire.on {
+    stroke: CanvasText;
+  }
+  .identity-graph .wire.off {
+    stroke: GrayText;
+  }
+  .identity-graph .leaf.off .mark {
+    opacity: 1;
+    fill: GrayText;
+  }
+}

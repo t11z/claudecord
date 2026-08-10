@@ -61,6 +61,14 @@ short wizard instead of your account page:
 3. **GitHub (skippable)** — the same OAuth Device Flow `/link-github` uses,
    just walked through in the browser. Skipping is remembered, so you won't
    be asked again — link later from your account page whenever you want.
+   If GitHub linking can't work for you — no GitHub App configured on this
+   instance, or a `allow-github-role` gate you don't satisfy — the wizard says
+   so instead of offering a button that would fail.
+
+Both paths are equal: link in Discord or in the browser, whichever suits. A
+small diagram shows the result — your Discord account, with a branch to Claude
+and a branch to GitHub. Branches you haven't linked are dashed and carry the
+command that would link them.
 
 Once Claude is linked and GitHub is either linked or skipped, you land on
 your **account page** on every future sign-in instead: your link status,

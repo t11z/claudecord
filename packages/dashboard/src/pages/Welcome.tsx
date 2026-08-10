@@ -1,6 +1,7 @@
 import { useState } from "preact/hooks";
 import { api, type MeDto } from "../api.ts";
 import { Card } from "../components.tsx";
+import { IdentityGraph } from "../IdentityGraph.tsx";
 import { useGithubDeviceFlow } from "../useGithubDeviceFlow.ts";
 
 type ClaudeState = "idle" | "busy" | "error";
@@ -65,6 +66,17 @@ export function Welcome(props: { me: MeDto; onComplete: () => void }) {
               {me.guilds.length > 0 ? (
                 <p class="muted">Shared with the bot: {me.guilds.map((g) => g.name).join(", ")}.</p>
               ) : null}
+              {/* Live status — the open branches double as the instructions. */}
+              <IdentityGraph
+                compact
+                discord={{
+                  name: me.user.globalName ?? me.user.username ?? me.user.id,
+                  avatarUrl: me.user.avatarUrl,
+                }}
+                claude={{ linked: me.claude.linked, linkedAt: me.claude.linkedAt }}
+                github={{ linked: me.github.linked, login: me.github.login, linkedAt: null }}
+                githubBlockedReason={githubBlocked}
+              />
             </>
           ) : null}
 

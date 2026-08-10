@@ -10,6 +10,8 @@ import type {
   GuildConfigDto,
   GuildConfigResponseDto,
   GuildSummaryDto,
+  IdentityGraphDto,
+  IdentityGraphRowDto,
   MeDto,
   MeUsageDto,
   MigrationStatusDto,
@@ -31,6 +33,8 @@ export type {
   GuildConfigDto,
   GuildConfigResponseDto,
   GuildSummaryDto,
+  IdentityGraphDto,
+  IdentityGraphRowDto,
   MeDto,
   MeUsageDto,
   MigrationStatusDto,
@@ -88,6 +92,7 @@ export const api = {
   unlinkGithubIdentity: (discordUserId: string) =>
     request<{ ok: boolean }>("DELETE", `/api/github/identities/${discordUserId}`),
   claudeIdentities: () => request<ClaudeIdentitiesResponseDto>("GET", "/api/claude/identities"),
+  identityGraph: () => request<IdentityGraphDto>("GET", "/api/identity-graph"),
   unlinkClaudeIdentity: (discordUserId: string) =>
     request<{ ok: boolean }>("DELETE", `/api/claude/identities/${discordUserId}`),
   checkClaudeIdentity: (discordUserId: string) =>

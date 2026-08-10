@@ -101,7 +101,7 @@ Self-scoped (behind `requireUser()` — always the caller's own `sub`, never a p
 | --- | --- |
 | `GET /api/me` | profile, Claude/GitHub link status, onboarding-complete flag, mutual guilds |
 | `POST`/`DELETE /api/me/claude` | link (validates via `checkClaudeAuth`) / unlink your own Claude token |
-| `POST /api/me/github/device`, `POST /api/me/github/device/poll` | GitHub Device Flow, one step each — no server-side pending state, the `deviceCode` round-trips through the browser |
+| `POST /api/me/github/device`, `POST /api/me/github/device/poll` | GitHub Device Flow, one step each — no server-side pending state, the `deviceCode` round-trips through the browser. Both enforce the guild role gate via `checkGithubLinkEligibility`; the poll only on the call that authorizes, since checking every ~5s poll would be a `members.fetch` storm |
 | `POST /api/me/github/skip` | mark GitHub onboarding skipped (remembered, not re-asked) |
 | `DELETE /api/me/github` | unlink your own GitHub account (best-effort revoke) |
 | `GET /api/me/usage?window=30` | your own usage totals only |
@@ -121,6 +121,7 @@ Admin-only (behind `requireAdmin()`):
 | `GET /api/guilds` | the full guild list, instance-wide |
 | `GET /api/github/identities`, `DELETE /api/github/identities/:id` | per-user GitHub links |
 | `GET /api/claude/identities`, `DELETE .../:id`, `POST .../:id/check` | per-user Claude links |
+| `GET /api/identity-graph` | every user with a linked identity, joined to their dashboard profile — the *Linked accounts* page |
 | `GET /api/sessions` | thread↔session table with live running state |
 | `DELETE /api/sessions/:threadId` | reset (drops the mapping, aborts if running) |
 | `POST /api/sessions/:threadId/abort` | abort a running query |
@@ -159,7 +160,7 @@ session), `MemberApp` (session, not admin), or `AdminApp` (session, admin).
 (self-service link status + usage) once done. `AdminApp` first checks
 `GET /api/migrate/status`: while `needed` is true it renders `Migrate.tsx`
 (the upgrade wizard, see `guide/migration.md`) instead of the normal
-five-page router (Overview/Setup/Access/Sessions/Usage) — this only ever
+six-page router (Overview/Setup/Access/Linked accounts/Sessions/Usage) — this only ever
 fires for an install with prior state from before per-user accounts existed.
 
 The trigger logic itself (`hasPriorState`, `stampFreshInstall`) lives in

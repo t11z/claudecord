@@ -56,6 +56,16 @@ you) with a short code and a URL; open it, enter the code, approve, and the
 message updates to confirm. `/link-github status` shows your link and
 `/link-github unlink` disconnects it (revoking the token best-effort).
 
+The dashboard offers the same thing (Your account → *GitHub account*) — same
+Device Flow, same result, and since 1.4.0 the same **role gate**: if
+`allow-github-role` is set and you don't hold one of those roles, both paths
+refuse. Before 1.4.0 the browser path skipped that check, so it could store a
+link the Discord command would have declined. (The token was still unusable on
+a server where the role was missing — that is re-checked on every run — but the
+link shouldn't have been created.) Either path also tells you *why* it can't
+link, rather than failing on the attempt: no GitHub App configured, no shared
+server, or no permitting role.
+
 For each agentic message, the **message author's own** token is used — never
 anyone else's, and never a shared fallback, because there isn't one. A member
 who hasn't linked simply gets no GitHub access until they run `/link-github`.

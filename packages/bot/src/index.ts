@@ -2,6 +2,7 @@ import { type AppContext, createContext } from "./context.js";
 import { startDiscord } from "./discord/client.js";
 import { loadEnv } from "./env.js";
 import { createLogger } from "./logger.js";
+import type { LegacySecretsKey } from "./secrets.js";
 import { startWebServer } from "./web/server.js";
 
 /**
@@ -30,14 +31,16 @@ function warnAboutLegacyCredentials(ctx: AppContext): void {
     );
   }
 
-  const stored = ctx.secrets.get() as Record<string, unknown>;
-  const legacySecretsKeys = [
+  const legacySecretsKeys: LegacySecretsKey[] = [
     "claudeOauthToken",
     "anthropicApiKey",
     "githubToken",
     "dashboardPassword",
   ];
-  const presentSecretsKeys = legacySecretsKeys.filter((key) => stored[key] !== undefined);
+  // Via getLegacy, not a raw `!== undefined`: an empty string left over from an
+  // old deploy is not a value, and this warning must agree with what
+  // /api/migrate/status reports rather than nag about a key nobody can adopt.
+  const presentSecretsKeys = legacySecretsKeys.filter((key) => ctx.secrets.getLegacy(key));
   if (presentSecretsKeys.length > 0) {
     ctx.logger.warn(
       { keys: presentSecretsKeys },

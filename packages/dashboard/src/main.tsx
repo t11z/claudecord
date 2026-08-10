@@ -4,6 +4,7 @@ import { type AuthUserDto, api, type MeDto, type MigrationStatusDto } from "./ap
 import { Card } from "./components.tsx";
 import { Access } from "./pages/Access.tsx";
 import { Account } from "./pages/Account.tsx";
+import { Identities } from "./pages/Identities.tsx";
 import { Migrate } from "./pages/Migrate.tsx";
 import { Overview } from "./pages/Overview.tsx";
 import { Sessions } from "./pages/Sessions.tsx";
@@ -16,6 +17,7 @@ const ADMIN_ROUTES: { path: string; label: string; component: () => JSX.Element 
   { path: "#/", label: "Overview", component: Overview },
   { path: "#/setup", label: "Setup", component: Setup },
   { path: "#/access", label: "Access control", component: Access },
+  { path: "#/identities", label: "Linked accounts", component: Identities },
   { path: "#/sessions", label: "Sessions", component: Sessions },
   { path: "#/usage", label: "Usage", component: Usage },
 ];
