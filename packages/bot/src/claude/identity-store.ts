@@ -35,6 +35,20 @@ export class ClaudeIdentityStore {
     return this.get(discordUserId)?.oauthToken ?? null;
   }
 
+  /**
+   * Any linked token, or null if nobody has linked one. Only for read-only,
+   * no-cost, identity-agnostic calls — specifically listing the models
+   * Anthropic offers (see claude/models.ts), where the result is the same
+   * whoever asks. Never use this to bill a run: those must be the acting
+   * user's own token.
+   */
+  anyToken(): string | null {
+    for (const identity of Object.values(this.all())) {
+      if (identity.oauthToken) return identity.oauthToken;
+    }
+    return null;
+  }
+
   /** Store a freshly verified token, replacing any existing one for this user. */
   link(discordUserId: string, oauthToken: string): ClaudeIdentitySummary {
     const identity: StoredClaudeIdentity = {
