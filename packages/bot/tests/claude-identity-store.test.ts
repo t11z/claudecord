@@ -44,6 +44,13 @@ describe("ClaudeIdentityStore", () => {
     expect(store.getToken("nobody")).toBeNull();
   });
 
+  it("anyToken returns some linked token, or null when none exist", () => {
+    const { store } = makeStore();
+    expect(store.anyToken()).toBeNull();
+    store.link("u", "a-token");
+    expect(store.anyToken()).toBe("a-token");
+  });
+
   it("markVerified updates lastVerifiedAt without touching the token", () => {
     let now = 1000;
     const { store, secrets } = makeStore(() => now);

@@ -83,7 +83,7 @@ guides, configuration reference, security notes and maintainer docs.
 | `/ask` | One-shot question, optionally private |
 | `/reset` | Make Claude forget the current thread |
 | `/usage` | Server usage & queue stats |
-| `/model` | Sonnet / Opus / Haiku for new threads *(admin)* |
+| `/model` | Pick the model for new threads — autocompletes the live list of models Anthropic currently offers *(admin)* |
 | `/config` | Allowlists, agentic mode, on/off *(admin)* |
 | `/link-claude` | Connect your own Claude subscription — required before the bot will run for you |
 | `/link-github` | Connect your own GitHub account for agentic runs *(optional)* |

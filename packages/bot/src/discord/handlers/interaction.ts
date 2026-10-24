@@ -20,6 +20,20 @@ export async function handleInteraction(ctx: AppContext, interaction: Interactio
     return;
   }
 
+  if (interaction.isAutocomplete()) {
+    const command = commandMap.get(interaction.commandName);
+    if (!command?.autocomplete) return;
+    try {
+      await command.autocomplete(ctx, interaction);
+    } catch (err) {
+      ctx.logger.error({ err, command: interaction.commandName }, "autocomplete failed");
+      // Discord shows nothing rather than an error state for a failed
+      // autocomplete; an empty reply is the graceful close.
+      await interaction.respond([]).catch(() => {});
+    }
+    return;
+  }
+
   if (!interaction.isChatInputCommand()) return;
   const command = commandMap.get(interaction.commandName);
   if (!command) return;
